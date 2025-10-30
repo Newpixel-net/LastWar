@@ -1097,19 +1097,30 @@
             // ========================================
             
             startMusic(theme) {
-                if (!this.enabled || !this.audioContext) return;
+                if (!this.enabled) return;
+
+                // 🔊 FIX: Handle missing audio context
+                if (!this.audioContext) {
+                    console.warn('Audio context not initialized');
+                    return;
+                }
+
                 this.stopMusic();
-                
+
                 this.currentTheme = theme;
-                
+
                 // Find matching theme index
                 this.currentThemeIndex = this.themes.findIndex(t => t.name === theme.name) || 0;
-                
-                // Resume audio context if suspended
+
+                // 🔊 FIX: Resume audio context if suspended (browser autoplay policy)
                 if (this.audioContext.state === 'suspended') {
-                    this.audioContext.resume();
+                    this.audioContext.resume().then(() => {
+                        console.log('🎵 Audio context resumed - music should play now');
+                    }).catch(err => {
+                        console.error('Failed to resume audio:', err);
+                    });
                 }
-                
+
                 this.isPlaying = true;
                 this.step = 0;
                 this.bar = 0;
@@ -3799,7 +3810,20 @@
                 this.creditsThisRun += earnedCredits;
                 
                 this.combo++;
-                this.comboTimer = 1200; // ⚡ ULTIMATE: Reduced from 1800ms to 1200ms for MUCH harder combos!
+
+                // ⚖️ BALANCE: Adaptive combo timer - easier in early levels for interesting gameplay
+                // Levels 1-5: 2000ms (very forgiving, learn combos)
+                // Levels 6-10: 1600ms (moderate)
+                // Levels 11+: 1200ms (challenging, original difficulty)
+                let comboWindow = 1200;
+                if (this.currentLevel <= 5) {
+                    comboWindow = 2000;  // 67% longer window for tutorial levels
+                } else if (this.currentLevel <= 10) {
+                    comboWindow = 1600;  // 33% longer for early game
+                }
+
+                this.comboTimer = comboWindow;
+
                 if (this.combo > this.maxCombo) {
                     this.maxCombo = this.combo;
                 }
