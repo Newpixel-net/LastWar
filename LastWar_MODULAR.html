@@ -6024,7 +6024,361 @@
                 ctx.restore();
             }
         }
-        
+
+
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // 🔫 MODULE: BOSS WEAPON SYSTEM
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // PURPOSE: Special weapons unlocked via combos, used in boss battles
+        // FEATURES: 5 weapons + radial wheel UI + charge system
+        // ═══════════════════════════════════════════════════════════════════════════════
+
+        // 🔋 Weapon Charge System - Manages unlocking and charging weapons
+        class WeaponChargeSystem {
+            constructor(game) {
+                this.game = game;
+                this.charges = {
+                    stink: 0,
+                    freeze: 0,
+                    drone: 0,
+                    shock: 0,
+                    bomb: 0
+                };
+                this.maxCharges = {
+                    stink: 3,
+                    freeze: 2,
+                    drone: 2,
+                    shock: 2,
+                    bomb: 1
+                };
+                this.cooldowns = {
+                    stink: 0,
+                    freeze: 0,
+                    drone: 0,
+                    shock: 0,
+                    bomb: 0
+                };
+                this.cooldownDurations = {
+                    stink: 30000,
+                    freeze: 45000,
+                    drone: 40000,
+                    shock: 35000,
+                    bomb: Infinity // One use per boss
+                };
+                this.lastComboCheck = 0;
+            }
+
+            update(deltaTime) {
+                // Update cooldowns
+                Object.keys(this.cooldowns).forEach(weapon => {
+                    if (this.cooldowns[weapon] > 0) {
+                        this.cooldowns[weapon] -= deltaTime;
+                        if (this.cooldowns[weapon] < 0) this.cooldowns[weapon] = 0;
+                    }
+                });
+            }
+
+            checkComboMilestones(combo) {
+                // Prevent duplicate charges for same combo
+                if (combo === this.lastComboCheck) return;
+                this.lastComboCheck = combo;
+
+                // Award charges based on combo milestones
+                if (combo >= 5 && this.charges.stink < this.maxCharges.stink) {
+                    this.addCharge('stink');
+                }
+                if (combo >= 8 && this.charges.freeze < this.maxCharges.freeze) {
+                    this.addCharge('freeze');
+                }
+                if (combo >= 10 && this.charges.drone < this.maxCharges.drone) {
+                    this.addCharge('drone');
+                }
+                if (combo >= 12 && this.charges.shock < this.maxCharges.shock) {
+                    this.addCharge('shock');
+                }
+                if (combo >= 20 && this.charges.bomb < this.maxCharges.bomb) {
+                    this.addCharge('bomb');
+                }
+            }
+
+            addCharge(weaponId) {
+                this.charges[weaponId]++;
+                const names = {
+                    stink: 'STINK MISSILE',
+                    freeze: 'FREEZING TORNADO',
+                    drone: 'SHOOTING DRONES',
+                    shock: 'ELECTRIC SHOCK',
+                    bomb: 'ATOMIC BOMB'
+                };
+                this.game.createFloatingText(
+                    this.game.width / 2,
+                    100,
+                    `${names[weaponId]} CHARGED! ⚡`,
+                    '#ffd700'
+                );
+                this.game.audio.playUpgrade(); // Use existing sound
+            }
+
+            canUseWeapon(weaponId) {
+                return this.charges[weaponId] > 0 && this.cooldowns[weaponId] <= 0;
+            }
+
+            useCharge(weaponId) {
+                if (this.canUseWeapon(weaponId)) {
+                    this.charges[weaponId]--;
+                    this.cooldowns[weaponId] = this.cooldownDurations[weaponId];
+                    return true;
+                }
+                return false;
+            }
+
+            reset() {
+                // Reset all charges (called when starting new level)
+                Object.keys(this.charges).forEach(weapon => {
+                    this.charges[weapon] = 0;
+                });
+                this.lastComboCheck = 0;
+            }
+
+            resetCooldowns() {
+                // Reset cooldowns when boss defeated
+                Object.keys(this.cooldowns).forEach(weapon => {
+                    if (weapon !== 'bomb') { // Bomb stays on cooldown
+                        this.cooldowns[weapon] = 0;
+                    }
+                });
+            }
+        }
+
+
+        // 🎨 Radial Weapon Wheel UI
+        class RadialWeaponWheel {
+            constructor(game) {
+                this.game = game;
+                this.visible = false;
+                this.weapons = [
+                    { angle: 0, id: 'freeze', icon: '❄️', name: 'FREEZE' },
+                    { angle: Math.PI / 2, id: 'drone', icon: '🤖', name: 'DRONES' },
+                    { angle: Math.PI, id: 'stink', icon: '💣', name: 'STINK' },
+                    { angle: Math.PI * 1.5, id: 'shock', icon: '⚡', name: 'SHOCK' },
+                ];
+                this.centerWeapon = { id: 'bomb', icon: '☢️', name: 'ATOMIC BOMB' };
+                this.selectedWeapon = null;
+                this.wheelRadius = 100;
+                this.centerX = 0;
+                this.centerY = 0;
+                this.pulse = 0;
+            }
+
+            show() {
+                this.visible = true;
+                this.centerX = this.game.width / 2;
+                this.centerY = this.game.height - 150;
+            }
+
+            hide() {
+                this.visible = false;
+                this.selectedWeapon = null;
+            }
+
+            update(deltaTime) {
+                if (!this.visible) return;
+                this.pulse += deltaTime / 1000;
+            }
+
+            selectWeapon(id) {
+                const weapon = [...this.weapons, this.centerWeapon].find(w => w.id === id);
+                if (weapon && this.game.weaponCharges.canUseWeapon(id)) {
+                    this.game.activateWeapon(id);
+                    this.hide();
+                }
+            }
+
+            render(ctx) {
+                if (!this.visible) return;
+
+                ctx.save();
+
+                // Semi-transparent background overlay
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, this.game.width, this.game.height);
+
+                // Background circle
+                ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 50, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Title
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 24px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('BOSS WEAPONS', this.centerX, this.centerY - 200);
+                ctx.font = '16px Courier New';
+                ctx.fillStyle = '#aaa';
+                ctx.fillText('Click weapon or press 1-5', this.centerX, this.centerY - 175);
+
+                // Render outer weapons
+                this.weapons.forEach((weapon, index) => {
+                    this.renderWeapon(ctx, weapon, index + 1);
+                });
+
+                // Render center weapon (Atomic Bomb)
+                this.renderCenterWeapon(ctx);
+
+                ctx.restore();
+            }
+
+            renderWeapon(ctx, weapon, keyNumber) {
+                const x = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
+                const y = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
+
+                const charges = this.game.weaponCharges.charges[weapon.id];
+                const cooldown = this.game.weaponCharges.cooldowns[weapon.id];
+                const canUse = this.game.weaponCharges.canUseWeapon(weapon.id);
+
+                // Weapon circle background
+                ctx.fillStyle = canUse ? '#333' : '#111';
+                ctx.strokeStyle = canUse ? '#00ff00' : '#555';
+                ctx.lineWidth = canUse ? 4 : 2;
+
+                if (canUse) {
+                    const pulseSize = Math.sin(this.pulse * 3) * 2;
+                    ctx.shadowBlur = 20 + pulseSize;
+                    ctx.shadowColor = '#00ff00';
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, 45, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Cooldown overlay
+                if (cooldown > 0) {
+                    const totalCooldown = this.game.weaponCharges.cooldownDurations[weapon.id];
+                    const percentage = cooldown / totalCooldown;
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.arc(x, y, 45, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
+                    ctx.lineTo(x, y);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Cooldown text
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = 'bold 16px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(Math.ceil(cooldown / 1000) + 's', x, y);
+                } else {
+                    // Weapon icon
+                    ctx.font = 'bold 36px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = canUse ? '#fff' : '#555';
+                    ctx.fillText(weapon.icon, x, y);
+                }
+
+                // Charge count
+                if (charges > 0) {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.fillText(`×${charges}`, x + 35, y - 35);
+                }
+
+                // Key number
+                ctx.fillStyle = '#888';
+                ctx.font = 'bold 18px Courier New';
+                ctx.fillText(keyNumber.toString(), x, y + 60);
+
+                // Weapon name
+                ctx.fillStyle = canUse ? '#fff' : '#555';
+                ctx.font = '12px Courier New';
+                ctx.fillText(weapon.name, x, y + 75);
+            }
+
+            renderCenterWeapon(ctx) {
+                const x = this.centerX;
+                const y = this.centerY;
+                const weapon = this.centerWeapon;
+
+                const charges = this.game.weaponCharges.charges[weapon.id];
+                const canUse = this.game.weaponCharges.canUseWeapon(weapon.id);
+
+                // Larger center weapon
+                ctx.fillStyle = canUse ? '#8B0000' : '#111';
+                ctx.strokeStyle = canUse ? '#ff0000' : '#555';
+                ctx.lineWidth = canUse ? 5 : 2;
+
+                if (canUse) {
+                    const pulseSize = Math.sin(this.pulse * 5) * 5;
+                    ctx.shadowBlur = 40 + pulseSize;
+                    ctx.shadowColor = '#ff0000';
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, 55, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Icon
+                ctx.font = 'bold 44px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = canUse ? '#fff' : '#555';
+                ctx.fillText(weapon.icon, x, y);
+
+                // Charge indicator or requirement
+                if (charges > 0) {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = 'bold 16px Courier New';
+                    ctx.fillText('READY!', x, y + 75);
+                } else {
+                    ctx.fillStyle = '#888';
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.fillText('20 COMBO', x, y + 75);
+                }
+
+                // Key number
+                ctx.fillStyle = '#888';
+                ctx.font = 'bold 20px Courier New';
+                ctx.fillText('5', x, y - 75);
+
+                // Weapon name (smaller for center)
+                ctx.fillStyle = canUse ? '#ff0000' : '#555';
+                ctx.font = 'bold 11px Courier New';
+                ctx.fillText(weapon.name, x, y + 90);
+            }
+
+            // Check if mouse/touch is over a weapon
+            getWeaponAtPosition(x, y) {
+                // Check outer weapons
+                for (let weapon of this.weapons) {
+                    const wx = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
+                    const wy = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
+                    const dist = Math.hypot(x - wx, y - wy);
+                    if (dist < 45) return weapon.id;
+                }
+
+                // Check center weapon
+                const distCenter = Math.hypot(x - this.centerX, y - this.centerY);
+                if (distCenter < 55) return this.centerWeapon.id;
+
+                return null;
+            }
+        }
+
+
         const game = new Game();
     </script>
 </body>
