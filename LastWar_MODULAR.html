@@ -789,7 +789,7 @@
                     <p>Stars Earned: <span id="starsEarned">0</span> ⭐</p>
                 </div>
                 <button class="button" onclick="game.retry()">🔄 RETRY</button>
-                <button class="button" onclick="game.showLevelSelect()">Ã¢Â¬â€  UPGRADE</button>
+                <button class="button" onclick="game.showLevelSelect()">⬆️ UPGRADE</button>
                 <button class="button" onclick="game.showMainMenu()">🏠 EXIT</button>
             </div>
         </div>
@@ -1595,22 +1595,25 @@
                     const utterance = new SpeechSynthesisUtterance(text);
                     
                     const voices = window.speechSynthesis.getVoices();
-                    
-                    const deepVoice = voices.find(voice => 
-                        (voice.lang.startsWith('en-US')) && 
-                        (voice.name.toLowerCase().includes('male') || 
-                         voice.name.toLowerCase().includes('man') ||
-                         voice.name.toLowerCase().includes('david') ||
-                         voice.name.toLowerCase().includes('aaron') ||
-                         voice.name.toLowerCase().includes('james'))
+
+                    // 🔊 FIXED: Prefer deepest American male voices (Mortal Kombat style)
+                    const deepVoice = voices.find(voice =>
+                        (voice.lang.startsWith('en-US')) &&
+                        (voice.name.toLowerCase().includes('aaron') ||
+                         voice.name.toLowerCase().includes('fred') ||
+                         voice.name.toLowerCase().includes('daniel'))
+                    ) || voices.find(voice =>
+                        (voice.lang.startsWith('en-US')) &&
+                        (voice.name.toLowerCase().includes('male') ||
+                         voice.name.toLowerCase().includes('man'))
                     ) || voices.find(voice => voice.lang.startsWith('en-US')) || voices[0];
-                    
+
                     if (deepVoice) {
                         utterance.voice = deepVoice;
                     }
-                    
+
                     utterance.rate = rate;
-                    utterance.pitch = pitch;
+                    utterance.pitch = pitch * 0.5; // 🔊 FIXED: Much lower pitch (50% reduction)
                     utterance.volume = 1.0;
                     
                     window.speechSynthesis.speak(utterance);
@@ -1621,47 +1624,49 @@
             
             speakCombo(comboCount) {
                 if (!this.enabled) return;
-                
+
                 let message = '';
                 let rate = 1.0;
-                let pitch = 0.38;
+                let pitch = 0.5; // Will be reduced further by 50% in speak()
                 let currentTier = 0;
-                
+
+                // 🔊 FIXED: Mortal Kombat style - aggressive, warlike announcements
                 if (comboCount >= 50) {
-                    message = 'GOD COMBO!';
-                    rate = 0.7;
-                    pitch = 0.18;
+                    message = 'FLAWLESS VICTORY!';
+                    rate = 0.6;
+                    pitch = 0.3;
                     currentTier = 5;
                 } else if (comboCount >= 40) {
-                    message = 'ULTIMATE COMBO!';
-                    rate = 0.75;
-                    pitch = 0.28;
+                    message = 'ANNIHILATION!';
+                    rate = 0.65;
+                    pitch = 0.4;
                     currentTier = 4;
                 } else if (comboCount >= 30) {
-                    message = 'Awesome combo!';
-                    rate = 0.8;
-                    pitch = 0.33;
+                    message = 'BRUTALITY!';
+                    rate = 0.7;
+                    pitch = 0.5;
                     currentTier = 3;
                 } else if (comboCount >= 20) {
-                    message = 'Cool combo!';
-                    rate = 0.85;
-                    pitch = 0.38;
+                    message = 'FINISH HIM!';
+                    rate = 0.75;
+                    pitch = 0.6;
                     currentTier = 2;
                 } else if (comboCount >= 10) {
-                    message = 'Nice combo!';
-                    rate = 0.9;
-                    pitch = 0.43;
+                    message = 'UNSTOPPABLE!';
+                    rate = 0.8;
+                    pitch = 0.7;
                     currentTier = 1;
                 }
-                
+
                 if (currentTier > 0 && currentTier !== this.lastComboTier) {
                     this.lastComboTier = currentTier;
                     this.speak(message, rate, pitch);
                 }
             }
-            
+
             speakLifesteal() {
-                this.speak("Lifesteal!", 1.4, 1.1);
+                // 🔊 FIXED: Lower pitch for consistency
+                this.speak("BLOOD LUST!", 0.9, 0.8);
             }
             
             resetComboTier() {
@@ -1670,7 +1675,8 @@
             
             speakBossDefeat() {
                 if (!this.enabled) return;
-                this.speak("BOSS DEFEATED!", 0.7, 0.23);
+                // 🔊 FIXED: More dramatic, Mortal Kombat style
+                this.speak("FATALITY!", 0.6, 0.4);
             }
             
             toggle() {
@@ -3091,7 +3097,7 @@
                 const newAchs = this.achievements.getNewlyUnlocked();
                 const newAchDiv = document.getElementById('newAchievements');
                 if (newAchs.length > 0) {
-                    newAchDiv.innerHTML = '<p style="color: #ffd700; margin: 20px 0;">Ã°Å¸Å½â€° NEW ACHIEVEMENTS! Ã°Å¸Å½â€°</p>' +
+                    newAchDiv.innerHTML = '<p style="color: #ffd700; margin: 20px 0;">🎉 NEW ACHIEVEMENTS! 🎉</p>' +
                         newAchs.map(a => `<p style="font-size: clamp(20px, 5vw, 24px);">${a.icon} ${a.name}</p>`).join('');
                 } else {
                     newAchDiv.innerHTML = '';
@@ -3524,7 +3530,7 @@
                     if (this.comboTimer <= 0) {
                         this.combo = 0;
                         this.superMissileReady = false;
-                        this.audio.resetComboTier(); // Ã°Å¸Å½â„¢▯ Reset tier tracking
+                        this.audio.resetComboTier(); // 🎵 Reset tier tracking
                     }
                 }
                 
@@ -3982,7 +3988,7 @@
                 if (this.combo >= 2) {
                     this.comboDisplayTime = 1000;
                     this.audio.playCombo();
-                    this.audio.speakCombo(this.combo); // Ã°Å¸Å½â„¢▯ Pass combo count for tiered announcements
+                    this.audio.speakCombo(this.combo); // 🎵 Pass combo count for tiered announcements
                 }
                 
                 // 🚀 ULTIMATE: Escalating Combo System with HARDER thresholds
@@ -3996,7 +4002,7 @@
                     // 💜 Combo 12: Plasma Wave (was 10)
                     this.firePlasmaWave();
                 } else if (this.combo === 7) {
-                    // Ã°Å¸â€™â€º Combo 7: Super Missile (was 5)
+                    // 🚀 Combo 7: Super Missile (was 5)
                     this.superMissileReady = true;
                     this.fireSuperMissile();
                 }
@@ -4040,10 +4046,10 @@
                     // 🧹 CRITICAL: Clear ALL floating texts for clean victory screen
                     this.floatingTexts = [];
                     
-                    // Ã°Å¸Å½â„¢▯ Epic voice announcement
+                    // 🎵 Epic voice announcement
                     this.audio.speakBossDefeat();
                     
-                    // Ã°Å¸Å½â€  MASSIVE continuous particle effects during 5-second victory
+                    // 🎆 MASSIVE continuous particle effects during 5-second victory
                     const rainbowColors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ffd700'];
                     
                     // Primary explosion waves (250 particles instead of 150)
@@ -4086,7 +4092,7 @@
                         setTimeout(() => {
                             const x = 50 + Math.random() * 700;
                             const y = -50 - Math.random() * 150;
-                            const trophy = ['🏆', '👑', '⭐', 'Ã°Å¸Å½â€“▯', '💥â€¡'][Math.floor(Math.random() * 5)];
+                            const trophy = ['🏆', '👑', '⭐', '🎖️', '💥'][Math.floor(Math.random() * 5)];
                             this.createFloatingText(x, y, trophy, '#ffd700');
                         }, i * 80);
                     }
@@ -5241,7 +5247,7 @@
                 const configs = {
                     electric: { name: '⚡ ELECTRIC', color: '#00ffff', shots: 50, icon: '⚡' },
                     fire: { name: '🔥 FIRE', color: '#ff6600', shots: 50, icon: '🔥' },
-                    fireworks: { name: 'Ã°Å¸Å½â€  FIREWORKS', color: '#ff00ff', shots: 40, icon: 'Ã°Å¸Å½â€ ' }
+                    fireworks: { name: '🎆 FIREWORKS', color: '#ff00ff', shots: 40, icon: '🎆' }
                 };
                 
                 this.currentPowerUp = {
@@ -5649,7 +5655,7 @@
             }
             
             executeAttackPattern() {
-                this.telegraphTimer = 1500; // ✨ INCREASED: 500ms Ã¢â€ â€™ 1500ms warning time
+                this.telegraphTimer = 1500; // ✨ INCREASED: 500ms → 1500ms warning time
                 
                 switch(this.attackPattern) {
                     case 'SINGLE':
@@ -6077,7 +6083,7 @@
                 this.x = game.getLaneX(lane);
                 this.size = 30;
                 this.rotation = 0;
-                this.icons = { electric: '⚡', fire: '🔥', fireworks: 'Ã°Å¸Å½â€ ', shield: '🛡️' }; // 🛡️ NEW
+                this.icons = { electric: '⚡', fire: '🔥', fireworks: '🎆', shield: '🛡️' }; // 🛡️ NEW
                 this.colors = { electric: '#00ffff', fire: '#ff6600', fireworks: '#ff00ff', shield: '#00ccff', freeze: '#87ceeb', pierce: '#ffff00', homing: '#ff1493', timeSlow: '#9370db', rage: '#ff0000', multishot: '#ffd700' }; // 🚀 AAA: Extended with 6 new types
             }
             
@@ -6838,7 +6844,7 @@
                 ];
                 this.centerWeapon = { id: 'bomb', icon: '☢️', name: 'ATOMIC BOMB' };
                 this.selectedWeapon = null;
-                this.wheelRadius = 100;
+                this.wheelRadius = 70; // 🔧 FIXED: Smaller radius for compact UI
                 this.centerX = 0;
                 this.centerY = 0;
                 this.pulse = 0;
@@ -6846,8 +6852,9 @@
 
             show() {
                 this.visible = true;
-                this.centerX = this.game.width / 2;
-                this.centerY = this.game.height - 150;
+                // 🔧 FIXED: Position on right side of screen, not center
+                this.centerX = this.game.width - 120;
+                this.centerY = this.game.height / 2;
             }
 
             hide() {
@@ -6864,7 +6871,7 @@
                 const weapon = [...this.weapons, this.centerWeapon].find(w => w.id === id);
                 if (weapon && this.game.weaponCharges.canUseWeapon(id)) {
                     this.game.activateWeapon(id);
-                    this.hide();
+                    // 🔧 FIXED: Don't hide wheel - keep it visible during boss battle
                 }
             }
 
@@ -6873,30 +6880,25 @@
 
                 ctx.save();
 
-                // Semi-transparent background overlay
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 0, this.game.width, this.game.height);
+                // 🔧 FIXED: No full-screen overlay - keep game visible like mobile games
 
-                // Background circle
-                ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
-                ctx.strokeStyle = '#ffd700';
-                ctx.lineWidth = 3;
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = '#ffd700';
+                // Background circle - semi-transparent
+                ctx.fillStyle = 'rgba(20, 20, 20, 0.7)'; // 🔧 FIXED: More transparent
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)'; // 🔧 FIXED: Transparent gold border
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
                 ctx.beginPath();
-                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 50, 0, Math.PI * 2);
+                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 40, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // Title
-                ctx.fillStyle = '#ffd700';
-                ctx.font = 'bold 24px Courier New';
+                // 🔧 FIXED: Compact title above wheel
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+                ctx.font = 'bold 14px Courier New';
                 ctx.textAlign = 'center';
-                ctx.fillText('BOSS WEAPONS', this.centerX, this.centerY - 200);
-                ctx.font = '16px Courier New';
-                ctx.fillStyle = '#aaa';
-                ctx.fillText('Click weapon or press 1-5', this.centerX, this.centerY - 175);
+                ctx.fillText('WEAPONS', this.centerX, this.centerY - this.wheelRadius - 50);
 
                 // Render outer weapons
                 this.weapons.forEach((weapon, index) => {
@@ -6917,19 +6919,19 @@
                 const cooldown = this.game.weaponCharges.cooldowns[weapon.id];
                 const canUse = this.game.weaponCharges.canUseWeapon(weapon.id);
 
-                // Weapon circle background
-                ctx.fillStyle = canUse ? '#333' : '#111';
-                ctx.strokeStyle = canUse ? '#00ff00' : '#555';
-                ctx.lineWidth = canUse ? 4 : 2;
+                // Weapon circle background - semi-transparent
+                ctx.fillStyle = canUse ? 'rgba(50, 50, 50, 0.8)' : 'rgba(20, 20, 20, 0.7)';
+                ctx.strokeStyle = canUse ? 'rgba(0, 255, 0, 0.9)' : 'rgba(85, 85, 85, 0.7)';
+                ctx.lineWidth = canUse ? 3 : 2;
 
                 if (canUse) {
                     const pulseSize = Math.sin(this.pulse * 3) * 2;
-                    ctx.shadowBlur = 20 + pulseSize;
-                    ctx.shadowColor = '#00ff00';
+                    ctx.shadowBlur = 15 + pulseSize;
+                    ctx.shadowColor = 'rgba(0, 255, 0, 0.6)';
                 }
 
                 ctx.beginPath();
-                ctx.arc(x, y, 45, 0, Math.PI * 2);
+                ctx.arc(x, y, 35, 0, Math.PI * 2); // 🔧 FIXED: Smaller circles (35px)
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
@@ -6942,20 +6944,20 @@
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
                     ctx.beginPath();
                     ctx.moveTo(x, y);
-                    ctx.arc(x, y, 45, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
+                    ctx.arc(x, y, 35, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
                     ctx.lineTo(x, y);
                     ctx.closePath();
                     ctx.fill();
 
                     // Cooldown text
                     ctx.fillStyle = '#ff0000';
-                    ctx.font = 'bold 16px Courier New';
+                    ctx.font = 'bold 14px Courier New';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(Math.ceil(cooldown / 1000) + 's', x, y);
                 } else {
                     // Weapon icon
-                    ctx.font = 'bold 36px Arial';
+                    ctx.font = 'bold 28px Arial'; // 🔧 FIXED: Smaller icon
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillStyle = canUse ? '#fff' : '#555';
@@ -6964,20 +6966,17 @@
 
                 // Charge count
                 if (charges > 0) {
-                    ctx.fillStyle = '#ffd700';
-                    ctx.font = 'bold 14px Courier New';
-                    ctx.fillText(`×${charges}`, x + 35, y - 35);
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+                    ctx.font = 'bold 12px Courier New';
+                    ctx.fillText(`×${charges}`, x + 28, y - 28);
                 }
 
-                // Key number
-                ctx.fillStyle = '#888';
-                ctx.font = 'bold 18px Courier New';
-                ctx.fillText(keyNumber.toString(), x, y + 60);
+                // Key number - smaller for compact UI
+                ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
+                ctx.font = 'bold 12px Courier New';
+                ctx.fillText(keyNumber.toString(), x, y + 45);
 
-                // Weapon name
-                ctx.fillStyle = canUse ? '#fff' : '#555';
-                ctx.font = '12px Courier New';
-                ctx.fillText(weapon.name, x, y + 75);
+                // Weapon name - removed to save space
             }
 
             renderCenterWeapon(ctx) {
@@ -6988,25 +6987,25 @@
                 const charges = this.game.weaponCharges.charges[weapon.id];
                 const canUse = this.game.weaponCharges.canUseWeapon(weapon.id);
 
-                // Larger center weapon
-                ctx.fillStyle = canUse ? '#8B0000' : '#111';
-                ctx.strokeStyle = canUse ? '#ff0000' : '#555';
-                ctx.lineWidth = canUse ? 5 : 2;
+                // Larger center weapon - semi-transparent
+                ctx.fillStyle = canUse ? 'rgba(139, 0, 0, 0.8)' : 'rgba(20, 20, 20, 0.7)';
+                ctx.strokeStyle = canUse ? 'rgba(255, 0, 0, 0.9)' : 'rgba(85, 85, 85, 0.7)';
+                ctx.lineWidth = canUse ? 3 : 2;
 
                 if (canUse) {
-                    const pulseSize = Math.sin(this.pulse * 5) * 5;
-                    ctx.shadowBlur = 40 + pulseSize;
-                    ctx.shadowColor = '#ff0000';
+                    const pulseSize = Math.sin(this.pulse * 5) * 3;
+                    ctx.shadowBlur = 20 + pulseSize;
+                    ctx.shadowColor = 'rgba(255, 0, 0, 0.6)';
                 }
 
                 ctx.beginPath();
-                ctx.arc(x, y, 55, 0, Math.PI * 2);
+                ctx.arc(x, y, 45, 0, Math.PI * 2); // 🔧 FIXED: Smaller center (45px)
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
                 // Icon
-                ctx.font = 'bold 44px Arial';
+                ctx.font = 'bold 36px Arial'; // 🔧 FIXED: Smaller icon
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = canUse ? '#fff' : '#555';
@@ -7014,24 +7013,19 @@
 
                 // Charge indicator or requirement
                 if (charges > 0) {
-                    ctx.fillStyle = '#ffd700';
-                    ctx.font = 'bold 16px Courier New';
-                    ctx.fillText('READY!', x, y + 75);
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+                    ctx.font = 'bold 11px Courier New';
+                    ctx.fillText('READY!', x, y + 55);
                 } else {
-                    ctx.fillStyle = '#888';
-                    ctx.font = 'bold 14px Courier New';
-                    ctx.fillText('20 COMBO', x, y + 75);
+                    ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
+                    ctx.font = 'bold 10px Courier New';
+                    ctx.fillText('20 COMBO', x, y + 55);
                 }
 
                 // Key number
-                ctx.fillStyle = '#888';
-                ctx.font = 'bold 20px Courier New';
-                ctx.fillText('5', x, y - 75);
-
-                // Weapon name (smaller for center)
-                ctx.fillStyle = canUse ? '#ff0000' : '#555';
-                ctx.font = 'bold 11px Courier New';
-                ctx.fillText(weapon.name, x, y + 90);
+                ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
+                ctx.font = 'bold 12px Courier New';
+                ctx.fillText('5', x, y - 55);
             }
 
             // Check if mouse/touch is over a weapon
@@ -7041,12 +7035,12 @@
                     const wx = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
                     const wy = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
                     const dist = Math.hypot(x - wx, y - wy);
-                    if (dist < 45) return weapon.id;
+                    if (dist < 35) return weapon.id; // 🔧 FIXED: Use new radius
                 }
 
                 // Check center weapon
                 const distCenter = Math.hypot(x - this.centerX, y - this.centerY);
-                if (distCenter < 55) return this.centerWeapon.id;
+                if (distCenter < 45) return this.centerWeapon.id; // 🔧 FIXED: Use new radius
 
                 return null;
             }
