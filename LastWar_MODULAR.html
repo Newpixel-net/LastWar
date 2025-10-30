@@ -1669,6 +1669,29 @@
                 }
                 return this.enabled;
             }
+
+            // 🚀 AAA: Volume control methods
+            setMasterVolume(value) {
+                if (this.masterGain) {
+                    // value should be 0-1
+                    this.masterGain.gain.value = Math.max(0, Math.min(1, value));
+                }
+            }
+
+            setMusicVolume(value) {
+                if (this.musicGain) {
+                    // value should be 0-1
+                    this.musicGain.gain.value = Math.max(0, Math.min(1, value));
+                }
+            }
+
+            getMasterVolume() {
+                return this.masterGain ? this.masterGain.gain.value : 0.7;
+            }
+
+            getMusicVolume() {
+                return this.musicGain ? this.musicGain.gain.value : 1.0;
+            }
         }
 
         // ========================================
@@ -2772,7 +2795,23 @@
                 this.bossDefeated = false; // 🔥 NEW: Track boss defeat state
                 this.bossDefeatTimer = 0;  // 🔥 NEW: Timer for boss defeat sequence
                 this.bossVictoryData = null; // 🎬 ULTIMATE: Cinematic victory data
-                
+
+                // 🚀 AAA: Lifetime stats tracking
+                this.lifetimeStats = {
+                    totalKills: 0,
+                    totalCreditsEarned: 0,
+                    totalDamageTaken: 0,
+                    totalDamageDealt: 0,
+                    totalBossesDefeated: 0,
+                    totalLevelsCompleted: 0,
+                    totalPlaytime: 0,
+                    highestCombo: 0,
+                    totalPowerUpsCollected: 0,
+                    totalEliteKills: 0,
+                    perfectLevels: 0, // No damage taken
+                    totalDeaths: 0
+                };
+
                 this.init();
             }
             
@@ -3019,8 +3058,9 @@
             updateLevelGrid() {
                 const grid = document.getElementById('levelGrid');
                 grid.innerHTML = '';
-                
-                for (let i = 1; i <= 48; i++) {
+
+                // 🚀 AAA: Extended from 48 to 58 levels for more content
+                for (let i = 1; i <= 58; i++) {
                     const btn = document.createElement('div');
                     btn.className = 'level-button';
                     
@@ -3611,9 +3651,20 @@
                     } else {
                         enemyType = 'barricade';
                     }
-                    
+
                     const lane = Math.floor(Math.random() * 3);
-                    this.enemies.push(new Enemy(lane, -50, enemyType, this.currentLevel, this));
+                    const enemy = new Enemy(lane, -50, enemyType, this.currentLevel, this);
+
+                    // 🚀 AAA: 15% chance to spawn elite variant (2x HP, 3x credits, golden glow)
+                    if (Math.random() < 0.15 && !enemy.isBoss) {
+                        enemy.isElite = true;
+                        enemy.hp *= 2;
+                        enemy.maxHp = enemy.hp;
+                        enemy.creditValue *= 3;
+                        enemy.eliteGlow = 0;
+                    }
+
+                    this.enemies.push(enemy);
                 }
             }
             
@@ -4641,7 +4692,9 @@
                     upgrades: this.upgrades,
                     currentShip: this.currentShip,
                     ownedShips: this.ownedShips,
-                    levelStars: this.levelStars
+                    levelStars: this.levelStars,
+                    // 🚀 AAA: Save lifetime stats
+                    lifetimeStats: this.lifetimeStats
                 };
                 localStorage.setItem('lastwar_save', JSON.stringify(data));
             }
@@ -4656,6 +4709,10 @@
                     this.currentShip = data.currentShip || 'fighter';
                     this.ownedShips = data.ownedShips || ['fighter'];
                     this.levelStars = data.levelStars || {};
+                    // 🚀 AAA: Load lifetime stats
+                    if (data.lifetimeStats) {
+                        this.lifetimeStats = data.lifetimeStats;
+                    }
                 }
             }
             
@@ -5174,9 +5231,35 @@
                     ctx.textAlign = 'center';
                     ctx.fillText(Math.ceil(this.hp), 0, 10);
                 }
-                
+
+                // 🚀 AAA: Elite enemy golden glow effect
+                if (this.isElite) {
+                    this.eliteGlow = (this.eliteGlow || 0) + 0.1;
+                    const glowIntensity = Math.sin(this.eliteGlow) * 0.5 + 0.5;
+
+                    ctx.strokeStyle = '#ffd700';
+                    ctx.lineWidth = 4;
+                    ctx.shadowBlur = 30 * glowIntensity;
+                    ctx.shadowColor = '#ffd700';
+                    ctx.globalAlpha = 0.8 * glowIntensity;
+
+                    // Draw elite aura
+                    ctx.beginPath();
+                    ctx.arc(0, 0, Math.max(this.width, this.height) / 2 + 15, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.globalAlpha = 1;
+
+                    // Elite star indicator
+                    ctx.font = 'bold 20px Courier New';
+                    ctx.fillStyle = '#ffd700';
+                    ctx.textAlign = 'center';
+                    ctx.shadowBlur = 10;
+                    ctx.fillText('⭐', 0, -this.height / 2 - 20);
+                }
+
                 ctx.restore();
-                
+
                 // 🎯 NEW: Visual effect for stunned enemies
                 if (this.stunned) {
                     ctx.save();
