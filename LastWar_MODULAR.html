@@ -2788,7 +2788,12 @@
                 this.soundEnabled = true;
                 this.audio = new AudioManager();
                 this.achievements = new AchievementManager();
-                
+
+                // 🔫 Boss Weapon System
+                this.weaponCharges = new WeaponChargeSystem(this);
+                this.weaponWheel = new RadialWeaponWheel(this);
+                this.activeWeapons = []; // Currently active weapon instances
+
                 this.keys = {};
                 this.touches = { startX: 0, startY: 0 };
                 this.mousePos = { x: 0, y: 0 };
@@ -2849,6 +2854,30 @@
                         if ((e.key === ' ' || e.key === 'Spacebar') && this.player) {
                             this.player.useAbility();
                         }
+
+                        // 🔫 Weapon wheel keyboard controls
+                        if (this.weaponWheel && this.weaponWheel.visible) {
+                            const weaponMap = {
+                                '1': 'freeze',
+                                '2': 'drone',
+                                '3': 'stink',
+                                '4': 'shock',
+                                '5': 'bomb'
+                            };
+
+                            if (weaponMap[e.key]) {
+                                this.weaponWheel.selectWeapon(weaponMap[e.key]);
+                            }
+                        }
+
+                        // 🔫 Toggle weapon wheel with 'W' key during boss battles
+                        if (e.key.toLowerCase() === 'w' && this.boss && this.boss.hp > 0) {
+                            if (this.weaponWheel.visible) {
+                                this.weaponWheel.hide();
+                            } else {
+                                this.weaponWheel.show();
+                            }
+                        }
                     }
                 });
                 
@@ -2863,6 +2892,16 @@
                 this.canvas.addEventListener('click', (e) => {
                     if (this.state === 'PLAYING') {
                         const pos = this.responsiveCanvas.getMousePos(e.clientX, e.clientY);
+
+                        // 🔫 Check weapon wheel click first
+                        if (this.weaponWheel && this.weaponWheel.visible) {
+                            const weaponId = this.weaponWheel.getWeaponAtPosition(pos.x, pos.y);
+                            if (weaponId) {
+                                this.weaponWheel.selectWeapon(weaponId);
+                                return; // Don't process other clicks
+                            }
+                        }
+
                         this.handleHUDClick(pos.x, pos.y);
                     }
                 });
@@ -2871,11 +2910,20 @@
                     e.preventDefault();
                     const touch = e.touches[0];
                     const pos = this.responsiveCanvas.getMousePos(touch.clientX, touch.clientY);
-                    
+
                     this.touches.startX = touch.clientX;
                     this.touches.startY = touch.clientY;
-                    
+
                     if (this.state === 'PLAYING') {
+                        // 🔫 Check weapon wheel tap first
+                        if (this.weaponWheel && this.weaponWheel.visible) {
+                            const weaponId = this.weaponWheel.getWeaponAtPosition(pos.x, pos.y);
+                            if (weaponId) {
+                                this.weaponWheel.selectWeapon(weaponId);
+                                return; // Don't process other touches
+                            }
+                        }
+
                         this.handleHUDClick(pos.x, pos.y);
                     }
                 }, { passive: false });
@@ -2980,6 +3028,14 @@
             showLevelComplete() {
                 this.state = 'LEVEL_COMPLETE';
                 this.audio.stopMusic();
+
+                // 🔫 Hide weapon wheel and reset charges
+                if (this.weaponWheel) {
+                    this.weaponWheel.hide();
+                }
+                if (this.weaponCharges) {
+                    this.weaponCharges.reset();
+                }
 
                 const distance = Math.floor(this.levelDistance / 10);
 
@@ -3631,7 +3687,23 @@
                         this.floatingTexts.splice(i, 1);
                     }
                 }
-                
+
+                // 🔫 Update weapon systems
+                if (this.weaponCharges) {
+                    this.weaponCharges.update(deltaTime);
+                }
+                if (this.weaponWheel) {
+                    this.weaponWheel.update(deltaTime);
+                }
+
+                // 🔫 Update active weapons
+                for (let i = this.activeWeapons.length - 1; i >= 0; i--) {
+                    this.activeWeapons[i].update(deltaTime);
+                    if (this.activeWeapons[i].remove) {
+                        this.activeWeapons.splice(i, 1);
+                    }
+                }
+
                 if (!this.bossBattleActive) {
                     this.levelDistance += 3;
                 }
@@ -3665,9 +3737,56 @@
                     this.boss = new Boss(1, -150, this.currentLevel, this);
                     this.enemies.push(this.boss);
                     this.createFloatingText(this.width / 2, 200, '☠️ BOSS BATTLE! ☠️', '#ffd700');
+
+                    // 🔫 Show weapon wheel after boss appears
+                    if (this.weaponWheel) {
+                        setTimeout(() => {
+                            this.weaponWheel.show();
+                        }, 3000); // Show 3 seconds after boss spawns
+                    }
                 }, 2000);
             }
-            
+
+            // 🔫 Activate a boss weapon
+            activateWeapon(weaponId) {
+                if (!this.boss || this.boss.hp <= 0) {
+                    console.log('🔫 Cannot use weapon - no boss active');
+                    return;
+                }
+
+                if (!this.weaponCharges.useCharge(weaponId)) {
+                    console.log('🔫 Weapon not ready:', weaponId);
+                    return;
+                }
+
+                console.log('🔫 ACTIVATING WEAPON:', weaponId);
+
+                switch(weaponId) {
+                    case 'stink':
+                        // TODO: Will implement StinkMissile class
+                        console.log('💣 Stink Missile activated!');
+                        break;
+                    case 'freeze':
+                        // TODO: Will implement FreezingTornado class
+                        console.log('❄️ Freezing Tornado activated!');
+                        break;
+                    case 'drone':
+                        // TODO: Will implement SupportDrone class
+                        console.log('🤖 Support Drones activated!');
+                        break;
+                    case 'shock':
+                        // TODO: Will implement ElectricShock class
+                        console.log('⚡ Electric Shock activated!');
+                        break;
+                    case 'bomb':
+                        // TODO: Will implement AtomicBomb class
+                        console.log('☢️ ATOMIC BOMB activated!');
+                        break;
+                }
+
+                this.audio.playUpgrade(); // Play activation sound
+            }
+
             spawnEnemies(deltaTime) {
                 this.enemySpawnTimer += deltaTime;
 
@@ -3823,6 +3942,11 @@
                 }
 
                 this.comboTimer = comboWindow;
+
+                // 🔫 Check weapon unlock milestones
+                if (this.weaponCharges) {
+                    this.weaponCharges.checkComboMilestones(this.combo);
+                }
 
                 if (this.combo > this.maxCombo) {
                     this.maxCombo = this.combo;
@@ -4219,6 +4343,11 @@
                 if (this.bossDefeated && this.bossVictoryData) {
                     this.renderBossVictoryCinematic();
                 }
+
+                // 🔫 Render weapon wheel (on top of everything)
+                if (this.weaponWheel) {
+                    this.weaponWheel.render(this.ctx);
+                }
             }
             
             renderGame() {
@@ -4250,7 +4379,10 @@
                 this.particles.forEach(particle => particle.render(this.ctx));
                 this.damageFields.forEach(field => field.render(this.ctx)); // 🌈 NEW: Render damage fields
                 this.floatingTexts.forEach(text => text.render(this.ctx));
-                
+
+                // 🔫 Render active weapon effects
+                this.activeWeapons.forEach(weapon => weapon.render(this.ctx));
+
                 this.renderHUD();
                 
                 if (this.comboDisplayTime > 0 && this.combo >= 2) {
