@@ -1669,6 +1669,29 @@
                 }
                 return this.enabled;
             }
+
+            // 🚀 AAA: Volume control methods
+            setMasterVolume(value) {
+                if (this.masterGain) {
+                    // value should be 0-1
+                    this.masterGain.gain.value = Math.max(0, Math.min(1, value));
+                }
+            }
+
+            setMusicVolume(value) {
+                if (this.musicGain) {
+                    // value should be 0-1
+                    this.musicGain.gain.value = Math.max(0, Math.min(1, value));
+                }
+            }
+
+            getMasterVolume() {
+                return this.masterGain ? this.masterGain.gain.value : 0.7;
+            }
+
+            getMusicVolume() {
+                return this.musicGain ? this.musicGain.gain.value : 1.0;
+            }
         }
 
         // ========================================
@@ -2187,6 +2210,8 @@
                 cost: 0,
                 speed: 1.0,
                 size: 1.0,
+                shieldCapacity: 30, // 🛡️ AAA: New parameter - absorbs 30% of damage before HP
+                critChance: 0.15, // 🎯 AAA: New parameter - 15% crit chance (up from base 10%)
                 desc: 'Balanced fighter',
                 ability: null,
                 render: (ctx, x, y, w, h, theme) => {
@@ -2213,6 +2238,8 @@
                 cost: 500,
                 speed: 0.8,
                 size: 1.3,
+                shieldCapacity: 50, // 🛡️ AAA: Tank ship has high shield capacity
+                critChance: 0.08, // 🎯 AAA: Low crit chance (below base 10%)
                 desc: 'Heavy tank',
                 ability: null,
                 render: (ctx, x, y, w, h, theme) => {
@@ -2240,6 +2267,8 @@
                 cost: 800,
                 speed: 1.3,
                 size: 0.8,
+                shieldCapacity: 15, // 🛡️ AAA: Speed ship has low shield
+                critChance: 0.28, // 🎯 AAA: High crit chance for glass cannon build
                 desc: 'Speed demon',
                 ability: null,
                 render: (ctx, x, y, w, h, theme) => {
@@ -2271,6 +2300,8 @@
                 cost: 1500,
                 speed: 1.1,
                 size: 0.9,
+                shieldCapacity: 25, // 🛡️ AAA: Moderate shield for balanced evasion ship
+                critChance: 0.22, // 🎯 AAA: Good crit for hit-and-run tactics
                 desc: 'Stealth specialist',
                 legendary: true,
                 ability: {
@@ -2308,6 +2339,8 @@
                 cost: 2000,
                 speed: 0.6,
                 size: 1.5,
+                shieldCapacity: 70, // 🛡️ AAA: Highest shield capacity - ultimate tank
+                critChance: 0.05, // 🎯 AAA: Very low crit - focused on defense
                 desc: 'Ultimate defense',
                 legendary: true,
                 ability: {
@@ -2351,6 +2384,8 @@
                 cost: 2500,
                 speed: 1.0,
                 size: 1.0,
+                shieldCapacity: 40, // 🛡️ AAA: Balanced shield - sustain through rebirth
+                critChance: 0.18, // 🎯 AAA: Balanced crit chance
                 desc: 'Rises from ashes',
                 legendary: true,
                 ability: {
@@ -2362,7 +2397,7 @@
                     ctx.fillStyle = '#ff4500';
                     ctx.shadowBlur = 35;
                     ctx.shadowColor = '#ff4500';
-                    
+
                     ctx.beginPath();
                     ctx.moveTo(x, y - h/2);
                     ctx.quadraticCurveTo(x - w/2, y, x - w/3, y + h/2);
@@ -2371,7 +2406,7 @@
                     ctx.quadraticCurveTo(x + w/2, y, x, y - h/2);
                     ctx.closePath();
                     ctx.fill();
-                    
+
                     const gradient = ctx.createRadialGradient(x, y, 0, x, y, w/3);
                     gradient.addColorStop(0, '#ffff00');
                     gradient.addColorStop(0.5, '#ff8c00');
@@ -2380,7 +2415,186 @@
                     ctx.beginPath();
                     ctx.arc(x, y, w/3, 0, Math.PI * 2);
                     ctx.fill();
-                    
+
+                    ctx.shadowBlur = 0;
+                }
+            },
+            // 🚀 AAA: NEW SHIP 1 - NOVA (Rapid Fire Specialist)
+            nova: {
+                id: 'nova',
+                name: 'NOVA',
+                icon: '⭐',
+                cost: 3000,
+                speed: 1.15,
+                size: 0.9,
+                shieldCapacity: 35,
+                critChance: 0.20,
+                desc: 'Rapid fire burst',
+                legendary: true,
+                ability: {
+                    name: 'BURST FIRE',
+                    desc: 'Triple shot burst',
+                    icon: '💫'
+                },
+                render: (ctx, x, y, w, h, theme) => {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.shadowBlur = 30;
+                    ctx.shadowColor = '#ffff00';
+
+                    // Star-shaped ship
+                    ctx.beginPath();
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (Math.PI / 4) * i - Math.PI / 2;
+                        const radius = (i % 2 === 0) ? w/2 : w/4;
+                        const px = x + Math.cos(angle) * radius;
+                        const py = y + Math.sin(angle) * radius;
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(x, y, w/5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.shadowBlur = 0;
+                }
+            },
+            // 🚀 AAA: NEW SHIP 2 - SPECTRE (Assassin)
+            spectre: {
+                id: 'spectre',
+                name: 'SPECTRE',
+                icon: '💀',
+                cost: 3500,
+                speed: 1.4,
+                size: 0.7,
+                shieldCapacity: 10,
+                critChance: 0.35, // Highest crit chance!
+                desc: 'Glass cannon',
+                legendary: true,
+                ability: {
+                    name: 'DEATH MARK',
+                    desc: 'Next hit does 5x damage',
+                    icon: '☠️'
+                },
+                render: (ctx, x, y, w, h, theme) => {
+                    ctx.fillStyle = '#000000';
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = 30;
+                    ctx.shadowColor = '#ff0000';
+
+                    // Sleek assassin shape
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - h/2);
+                    ctx.lineTo(x - w/4, y);
+                    ctx.lineTo(x - w/3, y + h/2);
+                    ctx.lineTo(x + w/3, y + h/2);
+                    ctx.lineTo(x + w/4, y);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Red core
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.arc(x, y, w/6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.shadowBlur = 0;
+                }
+            },
+            // 🚀 AAA: NEW SHIP 3 - AEGIS (Ultimate Tank)
+            aegis: {
+                id: 'aegis',
+                name: 'AEGIS',
+                icon: '🛡️',
+                cost: 4000,
+                speed: 0.5,
+                size: 1.6,
+                shieldCapacity: 90, // Highest shield!
+                critChance: 0.03, // Very low crit
+                desc: 'Impenetrable fortress',
+                legendary: true,
+                ability: {
+                    name: 'BARRIER',
+                    desc: 'Invulnerable for 5s',
+                    icon: '🔰'
+                },
+                render: (ctx, x, y, w, h, theme) => {
+                    ctx.fillStyle = '#1e90ff';
+                    ctx.shadowBlur = 35;
+                    ctx.shadowColor = '#1e90ff';
+
+                    // Shield shape
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - h/2);
+                    ctx.quadraticCurveTo(x - w/2, y - h/4, x - w/2, y + h/4);
+                    ctx.lineTo(x, y + h/2);
+                    ctx.lineTo(x + w/2, y + h/4);
+                    ctx.quadraticCurveTo(x + w/2, y - h/4, x, y - h/2);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Cross emblem
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - h/4);
+                    ctx.lineTo(x, y + h/4);
+                    ctx.moveTo(x - w/4, y);
+                    ctx.lineTo(x + w/4, y);
+                    ctx.stroke();
+
+                    ctx.shadowBlur = 0;
+                }
+            },
+            // 🚀 AAA: NEW SHIP 4 - WRAITH (Life Stealer)
+            wraith: {
+                id: 'wraith',
+                name: 'WRAITH',
+                icon: '🌙',
+                cost: 4500,
+                speed: 1.05,
+                size: 1.0,
+                shieldCapacity: 45,
+                critChance: 0.12,
+                desc: 'Drains life from enemies',
+                legendary: true,
+                ability: {
+                    name: 'SOUL DRAIN',
+                    desc: 'Steal 30% damage as HP',
+                    icon: '💀'
+                },
+                render: (ctx, x, y, w, h, theme) => {
+                    ctx.fillStyle = '#4b0082';
+                    ctx.shadowBlur = 40;
+                    ctx.shadowColor = '#9370db';
+
+                    // Crescent moon shape
+                    ctx.beginPath();
+                    ctx.arc(x - w/6, y, w/2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(x + w/6, y, w/2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+
+                    // Trailing spirits
+                    for (let i = 0; i < 3; i++) {
+                        ctx.globalAlpha = 0.3 - (i * 0.1);
+                        ctx.fillStyle = '#9370db';
+                        ctx.beginPath();
+                        ctx.arc(x, y + h/2 + (i * 10), w/5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.globalAlpha = 1;
+
                     ctx.shadowBlur = 0;
                 }
             }
@@ -2581,7 +2795,23 @@
                 this.bossDefeated = false; // 🔥 NEW: Track boss defeat state
                 this.bossDefeatTimer = 0;  // 🔥 NEW: Timer for boss defeat sequence
                 this.bossVictoryData = null; // 🎬 ULTIMATE: Cinematic victory data
-                
+
+                // 🚀 AAA: Lifetime stats tracking
+                this.lifetimeStats = {
+                    totalKills: 0,
+                    totalCreditsEarned: 0,
+                    totalDamageTaken: 0,
+                    totalDamageDealt: 0,
+                    totalBossesDefeated: 0,
+                    totalLevelsCompleted: 0,
+                    totalPlaytime: 0,
+                    highestCombo: 0,
+                    totalPowerUpsCollected: 0,
+                    totalEliteKills: 0,
+                    perfectLevels: 0, // No damage taken
+                    totalDeaths: 0
+                };
+
                 this.init();
             }
             
@@ -2828,8 +3058,9 @@
             updateLevelGrid() {
                 const grid = document.getElementById('levelGrid');
                 grid.innerHTML = '';
-                
-                for (let i = 1; i <= 48; i++) {
+
+                // 🚀 AAA: Extended from 48 to 58 levels for more content
+                for (let i = 1; i <= 58; i++) {
                     const btn = document.createElement('div');
                     btn.className = 'level-button';
                     
@@ -3039,7 +3270,8 @@
             
             getUpgradeCost(currentLevel) {
                 if (currentLevel >= 10) return 0;
-                return 50 * Math.pow(2, currentLevel);
+                // 💰 AAA: Increased base cost from 50 to 75 (50% increase for better balance)
+                return 75 * Math.pow(2, currentLevel);
             }
             
             purchaseUpgrade(upgradeKey) {
@@ -3419,9 +3651,20 @@
                     } else {
                         enemyType = 'barricade';
                     }
-                    
+
                     const lane = Math.floor(Math.random() * 3);
-                    this.enemies.push(new Enemy(lane, -50, enemyType, this.currentLevel, this));
+                    const enemy = new Enemy(lane, -50, enemyType, this.currentLevel, this);
+
+                    // 🚀 AAA: 15% chance to spawn elite variant (2x HP, 3x credits, golden glow)
+                    if (Math.random() < 0.15 && !enemy.isBoss) {
+                        enemy.isElite = true;
+                        enemy.hp *= 2;
+                        enemy.maxHp = enemy.hp;
+                        enemy.creditValue *= 3;
+                        enemy.eliteGlow = 0;
+                    }
+
+                    this.enemies.push(enemy);
                 }
             }
             
@@ -3442,12 +3685,14 @@
                         
                         if (inLane && proj.y < enemy.y + enemy.height && proj.y > enemy.y - 10) {
                             let damage = 10 + (this.upgrades.firepower * 2.5);
-                            
+
                             if (proj.type === 'electric') damage *= 1.5;
                             if (proj.type === 'fire') damage *= 1.3;
                             if (proj.type === 'fireworks') damage *= 2;
-                            
-                            if (Math.random() < 0.1) {
+
+                            // 🎯 AAA: Use ship's critical hit chance instead of fixed 10%
+                            const critChance = this.player.ship.critChance || 0.10;
+                            if (Math.random() < critChance) {
                                 damage *= 2;
                                 this.createFloatingText(enemy.x, enemy.y, 'CRIT!', '#ffff00');
                                 this.hitStop = 30;
@@ -3456,14 +3701,22 @@
                             // 🛡️ Safety check before calling takeDamage
                             if (enemy && typeof enemy.takeDamage === 'function') {
                                 enemy.takeDamage(damage);
-                                this.createFloatingText(enemy.x, enemy.y, '-' + Math.floor(damage), '#ff0033');
+                                // 🚀 AAA: Enhanced hit markers with size based on damage
+                                const isCrit = Math.floor(damage) > (10 + (this.upgrades.firepower * 2.5)) * 1.5;
+                                const hitColor = isCrit ? '#ffff00' : '#ff0033';
+                                this.createFloatingText(enemy.x, enemy.y, '-' + Math.floor(damage), hitColor);
+
+                                // 🚀 AAA: Hit marker visual feedback
+                                if (isCrit) {
+                                    this.createParticles(enemy.x, enemy.y, 15, '#ffff00');
+                                } else {
+                                    this.createParticles(enemy.x, enemy.y, 8, '#ff6600');
+                                }
                             }
-                            
+
                             if (proj.type !== 'electric') {
                                 this.projectiles.splice(i, 1);
                             }
-                            
-                            this.createParticles(enemy.x, enemy.y, 5, this.currentTheme.primary);
                             
                             if (enemy && enemy.hp <= 0) {
                                 this.handleEnemyDestroyed(enemy, j);
@@ -3525,8 +3778,9 @@
                 }
                 
                 this.achievements.check('comboMaster', this.combo);
-                
-                const bonusCredits = enemy.creditValue * (this.combo - 1) * 0.5;
+
+                // 💰 AAA: Reduced combo multiplier from 0.5 to 0.2 (60% nerf for better balance)
+                const bonusCredits = enemy.creditValue * (this.combo - 1) * 0.2;
                 if (bonusCredits > 0) {
                     this.creditsThisRun += Math.floor(bonusCredits);
                     this.createFloatingText(enemy.x, enemy.y - 20, '+' + Math.floor(bonusCredits) + '💎', '#ffd700');
@@ -4142,8 +4396,32 @@
                     this.ctx.strokeStyle = '#fff';
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
-                    
-                    // 🛡️ NEW: Shield display
+
+                    // 🚀 AAA: Ship Shield Capacity Bar (new system)
+                    if (this.player.maxShieldCapacity > 0) {
+                        const shieldBarY = hpBarY - 15;
+                        const shieldPercent = this.player.currentShieldCapacity / this.player.maxShieldCapacity;
+
+                        this.ctx.fillStyle = 'rgba(0, 100, 200, 0.3)';
+                        this.ctx.fillRect(hpBarX, shieldBarY, hpBarWidth, 8);
+
+                        const shieldGradient = this.ctx.createLinearGradient(hpBarX, 0, hpBarX + hpBarWidth, 0);
+                        shieldGradient.addColorStop(0, '#00ddff');
+                        shieldGradient.addColorStop(1, '#0088ff');
+                        this.ctx.fillStyle = shieldGradient;
+                        this.ctx.fillRect(hpBarX, shieldBarY, hpBarWidth * shieldPercent, 8);
+
+                        this.ctx.strokeStyle = '#00ccff';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(hpBarX, shieldBarY, hpBarWidth, 8);
+
+                        // Shield label
+                        this.ctx.fillStyle = '#00ddff';
+                        this.ctx.font = 'bold 12px Courier New';
+                        this.ctx.fillText(`⚡${Math.floor(this.player.currentShieldCapacity)}%`, hpBarX + hpBarWidth + 10, shieldBarY + 7);
+                    }
+
+                    // 🛡️ Power-up Shield display (original system)
                     if (this.player.shields > 0) {
                         this.ctx.fillStyle = '#00ccff';
                         this.ctx.font = 'bold 18px Courier New';
@@ -4414,7 +4692,9 @@
                     upgrades: this.upgrades,
                     currentShip: this.currentShip,
                     ownedShips: this.ownedShips,
-                    levelStars: this.levelStars
+                    levelStars: this.levelStars,
+                    // 🚀 AAA: Save lifetime stats
+                    lifetimeStats: this.lifetimeStats
                 };
                 localStorage.setItem('lastwar_save', JSON.stringify(data));
             }
@@ -4429,6 +4709,10 @@
                     this.currentShip = data.currentShip || 'fighter';
                     this.ownedShips = data.ownedShips || ['fighter'];
                     this.levelStars = data.levelStars || {};
+                    // 🚀 AAA: Load lifetime stats
+                    if (data.lifetimeStats) {
+                        this.lifetimeStats = data.lifetimeStats;
+                    }
                 }
             }
             
@@ -4467,13 +4751,19 @@
                 this.lane = 1;
                 this.maxHp = maxHp;
                 this.hp = maxHp;
-                this.shields = 0; // 🛡️ NEW: Shield system
+                this.shields = 0; // 🛡️ Power-up shield system (blocks hits)
                 this.game = game;
                 this.ship = SHIP_TYPES[game.currentShip];
                 this.width = 40 * this.ship.size;
                 this.height = 60 * this.ship.size;
                 this.invincible = false;
                 this.invincibleTimer = 0;
+
+                // 🛡️ AAA: Ship shield capacity system (percentage-based absorption)
+                this.maxShieldCapacity = this.ship.shieldCapacity || 0;
+                this.currentShieldCapacity = this.maxShieldCapacity;
+                this.shieldRechargeDelay = 0;
+                this.shieldRechargeRate = 5; // 5% per second
                 
                 this.fireRate = (300 - (game.upgrades.attackSpeed * 30)) / this.ship.speed;
                 this.fireTimer = 0;
@@ -4555,7 +4845,20 @@
                 if (this.titanArmorBoost > 0) {
                     this.titanArmorBoost *= 0.99;
                 }
-                
+
+                // 🛡️ AAA: Shield recharge system
+                if (this.currentShieldCapacity < this.maxShieldCapacity) {
+                    if (this.shieldRechargeDelay > 0) {
+                        this.shieldRechargeDelay -= deltaTime;
+                    } else {
+                        // Recharge 5% per second
+                        this.currentShieldCapacity += (this.shieldRechargeRate * deltaTime) / 1000;
+                        if (this.currentShieldCapacity > this.maxShieldCapacity) {
+                            this.currentShieldCapacity = this.maxShieldCapacity;
+                        }
+                    }
+                }
+
                 if (this.currentPowerUp) {
                     this.currentPowerUp.remaining--;
                     if (this.currentPowerUp.remaining <= 0) {
@@ -4713,27 +5016,41 @@
             
             takeDamage(amount) {
                 if (this.invincible) return;
-                
+
                 let reduction = 1 - (this.game.upgrades.armor * 0.1);
-                
+
                 if (this.ship.id === 'titan' && this.titanArmorBoost > 0) {
                     reduction *= (1 - (this.titanArmorBoost / 100));
                 }
-                
-                const actualDamage = amount * Math.max(reduction, 0.1);
-                
-                // 🛡️ NEW: Shield absorbs damage first
+
+                let actualDamage = amount * Math.max(reduction, 0.1);
+
+                // 🛡️ Power-up shield blocks damage completely
                 if (this.shields > 0) {
                     this.shields--;
                     this.game.createFloatingText(this.x, this.y, '🛡️ BLOCKED', '#00ccff');
                     this.game.createParticles(this.x, this.y, 10, '#00ccff');
                     this.game.audio.playHit();
                     this.game.addScreenShake(3);
-                    
+
                     // Don't reset combo or set invincibility when shield absorbs damage
                     return;
                 }
-                
+
+                // 🛡️ AAA: Ship shield capacity absorbs percentage of damage
+                if (this.currentShieldCapacity > 0) {
+                    const shieldAbsorption = (this.currentShieldCapacity / 100);
+                    const damageAbsorbed = actualDamage * shieldAbsorption;
+                    const damageTaken = actualDamage - damageAbsorbed;
+
+                    actualDamage = damageTaken;
+                    this.currentShieldCapacity -= shieldAbsorption * 20; // Depletes shield
+                    if (this.currentShieldCapacity < 0) this.currentShieldCapacity = 0;
+                    this.shieldRechargeDelay = 3000; // 3 second delay before recharge
+
+                    this.game.createFloatingText(this.x, this.y - 30, `⚡${Math.floor(damageAbsorbed)} ABSORBED`, '#00ddff');
+                }
+
                 this.hp -= actualDamage;
                 
                 if (this.hp <= 0 && this.ship.id === 'phoenix' && this.abilityCharges > 0) {
@@ -4914,9 +5231,35 @@
                     ctx.textAlign = 'center';
                     ctx.fillText(Math.ceil(this.hp), 0, 10);
                 }
-                
+
+                // 🚀 AAA: Elite enemy golden glow effect
+                if (this.isElite) {
+                    this.eliteGlow = (this.eliteGlow || 0) + 0.1;
+                    const glowIntensity = Math.sin(this.eliteGlow) * 0.5 + 0.5;
+
+                    ctx.strokeStyle = '#ffd700';
+                    ctx.lineWidth = 4;
+                    ctx.shadowBlur = 30 * glowIntensity;
+                    ctx.shadowColor = '#ffd700';
+                    ctx.globalAlpha = 0.8 * glowIntensity;
+
+                    // Draw elite aura
+                    ctx.beginPath();
+                    ctx.arc(0, 0, Math.max(this.width, this.height) / 2 + 15, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.globalAlpha = 1;
+
+                    // Elite star indicator
+                    ctx.font = 'bold 20px Courier New';
+                    ctx.fillStyle = '#ffd700';
+                    ctx.textAlign = 'center';
+                    ctx.shadowBlur = 10;
+                    ctx.fillText('⭐', 0, -this.height / 2 - 20);
+                }
+
                 ctx.restore();
-                
+
                 // 🎯 NEW: Visual effect for stunned enemies
                 if (this.stunned) {
                     ctx.save();
@@ -4978,7 +5321,8 @@
                 this.armor = 0.30; // ✨ FIXED: 30% damage reduction
                 this.speed = 0;
                 this.contactDamage = 50;
-                this.creditValue = 200 + (level * 50);
+                // 💰 AAA: Reduced boss credits by 30% (from 200+50*level to 140+35*level) for better balance
+                this.creditValue = 140 + (level * 35);
                 this.width = 120 * sizeMultiplier;
                 this.height = 120 * sizeMultiplier;
                 this.size = 150 * sizeMultiplier;
@@ -5497,7 +5841,7 @@
                 this.size = 30;
                 this.rotation = 0;
                 this.icons = { electric: '⚡', fire: '🔥', fireworks: 'Ã°Å¸Å½â€ ', shield: '🛡️' }; // 🛡️ NEW
-                this.colors = { electric: '#00ffff', fire: '#ff6600', fireworks: '#ff00ff', shield: '#00ccff' }; // 🛡️ NEW
+                this.colors = { electric: '#00ffff', fire: '#ff6600', fireworks: '#ff00ff', shield: '#00ccff', freeze: '#87ceeb', pierce: '#ffff00', homing: '#ff1493', timeSlow: '#9370db', rage: '#ff0000', multishot: '#ffd700' }; // 🚀 AAA: Extended with 6 new types
             }
             
             update(deltaTime) {
