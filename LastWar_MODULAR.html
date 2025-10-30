@@ -2793,6 +2793,7 @@
                 this.weaponCharges = new WeaponChargeSystem(this);
                 this.weaponWheel = new RadialWeaponWheel(this);
                 this.activeWeapons = []; // Currently active weapon instances
+                this.timeScale = 1.0; // For slow-motion effects
 
                 this.keys = {};
                 this.touches = { startX: 0, startY: 0 };
@@ -3457,7 +3458,8 @@
                 }
                 
                 deltaTime *= this.slowMotion;
-                
+                deltaTime *= this.timeScale; // 🔫 Apply weapon slow-motion effects
+
                 if (this.state === 'PLAYING') {
                     this.update(deltaTime);
                 }
@@ -3779,7 +3781,13 @@
                         console.log('⚡ Electric Shock activated!');
                         break;
                     case 'bomb':
-                        // TODO: Will implement AtomicBomb class
+                        // ☢️ ATOMIC BOMB - Ultimate weapon!
+                        this.activeWeapons.push(new AtomicBomb(
+                            this.boss.x,
+                            this.boss.y,
+                            this.boss,
+                            this
+                        ));
                         console.log('☢️ ATOMIC BOMB activated!');
                         break;
                 }
@@ -6164,6 +6172,266 @@
         // PURPOSE: Special weapons unlocked via combos, used in boss battles
         // FEATURES: 5 weapons + radial wheel UI + charge system
         // ═══════════════════════════════════════════════════════════════════════════════
+
+        // ☢️ ATOMIC BOMB - Ultimate weapon dealing massive damage
+        class AtomicBomb {
+            constructor(targetX, targetY, boss, game) {
+                this.game = game;
+                this.boss = boss;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.phase = 'WARNING'; // WARNING → EXPLOSION → MUSHROOM → DONE
+                this.timer = 0;
+                this.remove = false;
+                this.explosionRadius = 0;
+                this.maxExplosionRadius = 400;
+                this.mushroomHeight = 0;
+                this.maxMushroomHeight = 300;
+                this.particles = [];
+                this.damageDealt = false;
+                this.shockwaveRadius = 0;
+                this.flashIntensity = 0;
+            }
+
+            update(deltaTime) {
+                this.timer += deltaTime;
+
+                switch(this.phase) {
+                    case 'WARNING':
+                        if (this.timer >= 1000) {
+                            this.phase = 'EXPLOSION';
+                            this.timer = 0;
+                            this.explode();
+                        }
+                        break;
+
+                    case 'EXPLOSION':
+                        // Expand explosion radius
+                        this.explosionRadius = Math.min(
+                            this.maxExplosionRadius,
+                            this.explosionRadius + (deltaTime * 0.8)
+                        );
+                        this.shockwaveRadius = this.explosionRadius * 1.2;
+
+                        // Flash effect
+                        this.flashIntensity = Math.max(0, 1 - (this.timer / 500));
+
+                        // Screen shake
+                        if (this.timer < 500) {
+                            const intensity = 50 * (1 - this.timer / 500);
+                            this.game.screenShake.x = (Math.random() - 0.5) * intensity;
+                            this.game.screenShake.y = (Math.random() - 0.5) * intensity;
+                        }
+
+                        // Update particles
+                        this.particles.forEach(p => {
+                            p.x += p.vx * (deltaTime / 16);
+                            p.y += p.vy * (deltaTime / 16);
+                            p.life -= deltaTime / 1000;
+                            p.radius *= 0.98;
+                        });
+                        this.particles = this.particles.filter(p => p.life > 0);
+
+                        if (this.timer >= 800) {
+                            this.phase = 'MUSHROOM';
+                            this.timer = 0;
+                        }
+                        break;
+
+                    case 'MUSHROOM':
+                        // Grow mushroom cloud
+                        this.mushroomHeight = Math.min(
+                            this.maxMushroomHeight,
+                            this.mushroomHeight + (deltaTime * 0.3)
+                        );
+
+                        // Fade explosion
+                        this.explosionRadius *= 0.95;
+
+                        if (this.timer >= 2000) {
+                            this.phase = 'DONE';
+                            this.remove = true;
+                            // Restore normal game speed
+                            if (this.game.timeScale) {
+                                this.game.timeScale = 1.0;
+                            }
+                        }
+                        break;
+                }
+            }
+
+            explode() {
+                // Deal damage to boss (33% of max HP)
+                if (this.boss && this.boss.hp > 0 && !this.damageDealt) {
+                    const damage = Math.floor(this.boss.maxHp * 0.33);
+                    this.boss.hp = Math.max(0, this.boss.hp - damage);
+                    this.damageDealt = true;
+
+                    // Show damage text
+                    this.game.createFloatingText(
+                        this.targetX,
+                        this.targetY - 100,
+                        `☢️ -${damage} ☢️`,
+                        '#ff00ff',
+                        60
+                    );
+                }
+
+                // Create explosion particles
+                for (let i = 0; i < 100; i++) {
+                    const angle = (Math.PI * 2 / 100) * i;
+                    const speed = 3 + Math.random() * 5;
+                    this.particles.push({
+                        x: this.targetX,
+                        y: this.targetY,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        radius: 10 + Math.random() * 20,
+                        life: 1 + Math.random() * 2,
+                        color: Math.random() > 0.5 ? '#ff6600' : '#ffaa00'
+                    });
+                }
+
+                // Slow motion effect
+                if (this.game.timeScale !== undefined) {
+                    this.game.timeScale = 0.15;
+                }
+
+                // Play sound effect
+                this.game.audio.playExplosion();
+            }
+
+            render(ctx) {
+                ctx.save();
+
+                // WARNING phase - pulsing target indicator
+                if (this.phase === 'WARNING') {
+                    const pulse = Math.sin(this.timer / 100) * 0.3 + 0.7;
+                    const radius = 60 * pulse;
+
+                    // Warning circle
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([10, 10]);
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Crosshair
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.targetX - 40, this.targetY);
+                    ctx.lineTo(this.targetX + 40, this.targetY);
+                    ctx.moveTo(this.targetX, this.targetY - 40);
+                    ctx.lineTo(this.targetX, this.targetY + 40);
+                    ctx.stroke();
+
+                    // Warning text
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = 'bold 24px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('☢️ INCOMING ☢️', this.targetX, this.targetY - 80);
+                }
+
+                // EXPLOSION phase
+                if (this.phase === 'EXPLOSION') {
+                    // Flash effect
+                    if (this.flashIntensity > 0) {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${this.flashIntensity * 0.6})`;
+                        ctx.fillRect(0, 0, this.game.width, this.game.height);
+                    }
+
+                    // Main explosion
+                    const gradient = ctx.createRadialGradient(
+                        this.targetX, this.targetY, 0,
+                        this.targetX, this.targetY, this.explosionRadius
+                    );
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                    gradient.addColorStop(0.3, 'rgba(255, 200, 0, 0.7)');
+                    gradient.addColorStop(0.6, 'rgba(255, 100, 0, 0.4)');
+                    gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, this.explosionRadius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Shockwave ring
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${1 - (this.timer / 800)})`;
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, this.shockwaveRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Particles
+                    this.particles.forEach(p => {
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = p.life / 2;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    ctx.globalAlpha = 1;
+                }
+
+                // MUSHROOM phase
+                if (this.phase === 'MUSHROOM') {
+                    // Fading explosion base
+                    if (this.explosionRadius > 10) {
+                        const baseGradient = ctx.createRadialGradient(
+                            this.targetX, this.targetY, 0,
+                            this.targetX, this.targetY, this.explosionRadius
+                        );
+                        baseGradient.addColorStop(0, 'rgba(255, 100, 0, 0.3)');
+                        baseGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+                        ctx.fillStyle = baseGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.targetX, this.targetY, this.explosionRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Mushroom cloud stem
+                    const stemGradient = ctx.createLinearGradient(
+                        this.targetX, this.targetY,
+                        this.targetX, this.targetY - this.mushroomHeight
+                    );
+                    stemGradient.addColorStop(0, 'rgba(100, 100, 100, 0.8)');
+                    stemGradient.addColorStop(1, 'rgba(150, 150, 150, 0.6)');
+
+                    ctx.fillStyle = stemGradient;
+                    ctx.fillRect(
+                        this.targetX - 30,
+                        this.targetY - this.mushroomHeight,
+                        60,
+                        this.mushroomHeight
+                    );
+
+                    // Mushroom cloud cap
+                    if (this.mushroomHeight > 50) {
+                        const capY = this.targetY - this.mushroomHeight;
+                        const capRadius = 80;
+
+                        const capGradient = ctx.createRadialGradient(
+                            this.targetX, capY, 0,
+                            this.targetX, capY, capRadius
+                        );
+                        capGradient.addColorStop(0, 'rgba(200, 200, 200, 0.9)');
+                        capGradient.addColorStop(0.7, 'rgba(100, 100, 100, 0.7)');
+                        capGradient.addColorStop(1, 'rgba(80, 80, 80, 0.3)');
+
+                        ctx.fillStyle = capGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.targetX, capY, capRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                ctx.restore();
+            }
+        }
 
         // 🔋 Weapon Charge System - Manages unlocking and charging weapons
         class WeaponChargeSystem {
