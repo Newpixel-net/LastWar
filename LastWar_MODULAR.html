@@ -2210,7 +2210,7 @@
                 cost: 0,
                 speed: 1.0,
                 size: 1.0,
-                shieldCapacity: 30, // 🛡️ AAA: New parameter - absorbs 30% of damage before HP
+                shieldCapacity: 50, // ⚖️ BALANCE: Increased from 30 to 50 for better survivability
                 critChance: 0.15, // 🎯 AAA: New parameter - 15% crit chance (up from base 10%)
                 desc: 'Balanced fighter',
                 ability: null,
@@ -2969,9 +2969,27 @@
             showLevelComplete() {
                 this.state = 'LEVEL_COMPLETE';
                 this.audio.stopMusic();
-                
+
                 const distance = Math.floor(this.levelDistance / 10);
-                const completionBonus = 100 + (this.currentLevel * 20);
+
+                // ⚖️ BALANCE: Enhanced completion bonuses for positive feedback
+                let completionBonus = 100 + (this.currentLevel * 20);
+
+                // First-time clear bonus (levels 1-10 only)
+                if (this.currentLevel <= 10 && !this.levelStars[this.currentLevel]) {
+                    completionBonus += 100;
+                }
+
+                // Perfect clear bonus (no damage taken)
+                if (this.damageTaken === 0) {
+                    completionBonus += 75;
+                }
+
+                // Boss victory bonus
+                if (this.currentLevel % 5 === 0) {
+                    completionBonus += 150;
+                }
+
                 const total = this.creditsThisRun + completionBonus;
                 
                 const stars = this.calculateStars();
@@ -3143,8 +3161,9 @@
                 
                 // 🛡️ Initialize atmosphere systems
                 this.initAtmosphere();
-                
-                const maxHP = 100 + (this.upgrades.health * 20);
+
+                // ⚖️ BALANCE: Increased base HP from 100 to 150 for better survivability
+                const maxHP = 150 + (this.upgrades.health * 20);
                 this.player = new Player(this.width / 2, this.height - 100, maxHP, this);
                 
                 this.showLevelIntro();
@@ -3270,8 +3289,19 @@
             
             getUpgradeCost(currentLevel) {
                 if (currentLevel >= 10) return 0;
-                // 💰 AAA: Increased base cost from 50 to 75 (50% increase for better balance)
-                return 75 * Math.pow(2, currentLevel);
+
+                // ⚖️ BALANCE: Adaptive cost curve - cheaper early upgrades for positive feedback loop
+                // Levels 0-2: 40% discount (45 credits instead of 75)
+                // Levels 3-5: 20% discount (60 credits)
+                // Levels 6+: Full price (75 credits)
+                let baseCost = 75;
+                if (currentLevel <= 2) {
+                    baseCost = 45;  // 40% cheaper
+                } else if (currentLevel <= 5) {
+                    baseCost = 60;  // 20% cheaper
+                }
+
+                return baseCost * Math.pow(2, currentLevel);
             }
             
             purchaseUpgrade(upgradeKey) {
@@ -3629,8 +3659,19 @@
             
             spawnEnemies(deltaTime) {
                 this.enemySpawnTimer += deltaTime;
-                
-                let spawnRate = Math.max(1000 - (this.currentLevel * 40), 300);
+
+                // ⚖️ BALANCE: Graduated spawn rate curve for breathing room
+                // Levels 1-5: Start at 1400ms (slower, easier to learn)
+                // Levels 6-10: Start at 1200ms (moderate)
+                // Levels 11+: Normal formula
+                let baseSpawnTime = 1000;
+                if (this.currentLevel <= 5) {
+                    baseSpawnTime = 1400;  // 40% slower for tutorial levels
+                } else if (this.currentLevel <= 10) {
+                    baseSpawnTime = 1200;  // 20% slower for early game
+                }
+
+                let spawnRate = Math.max(baseSpawnTime - (this.currentLevel * 40), 300);
                 const progress = this.levelProgress;
                 if (progress > 0.7) {
                     spawnRate *= 0.6;
@@ -3655,8 +3696,21 @@
                     const lane = Math.floor(Math.random() * 3);
                     const enemy = new Enemy(lane, -50, enemyType, this.currentLevel, this);
 
-                    // 🚀 AAA: 15% chance to spawn elite variant (2x HP, 3x credits, golden glow)
-                    if (Math.random() < 0.15 && !enemy.isBoss) {
+                    // ⚖️ BALANCE: Progressive elite spawning - graduated difficulty curve
+                    // Levels 1-5: 0% (learn basics)
+                    // Levels 6-10: 5% (introduction)
+                    // Levels 11-20: 10% (regular encounters)
+                    // Levels 21+: 15% (full challenge)
+                    let eliteChance = 0;
+                    if (this.currentLevel >= 21) {
+                        eliteChance = 0.15;
+                    } else if (this.currentLevel >= 11) {
+                        eliteChance = 0.10;
+                    } else if (this.currentLevel >= 6) {
+                        eliteChance = 0.05;
+                    }
+
+                    if (Math.random() < eliteChance && !enemy.isBoss) {
                         enemy.isElite = true;
                         enemy.hp *= 2;
                         enemy.maxHp = enemy.hp;
@@ -3733,7 +3787,16 @@
             
             handleEnemyDestroyed(enemy, index) {
                 this.enemiesKilled++;
-                this.creditsThisRun += enemy.creditValue;
+
+                // ⚖️ BALANCE: Early level credit bonus for better economy pacing
+                // Levels 1-10: +50% credits to match increased costs
+                let creditMultiplier = 1.0;
+                if (this.currentLevel <= 10) {
+                    creditMultiplier = 1.5;
+                }
+
+                const earnedCredits = Math.floor(enemy.creditValue * creditMultiplier);
+                this.creditsThisRun += earnedCredits;
                 
                 this.combo++;
                 this.comboTimer = 1200; // ⚡ ULTIMATE: Reduced from 1800ms to 1200ms for MUCH harder combos!
@@ -4713,6 +4776,11 @@
                     if (data.lifetimeStats) {
                         this.lifetimeStats = data.lifetimeStats;
                     }
+                } else {
+                    // ⚖️ BALANCE: New players get starting credits for power fantasy opening
+                    this.credits = 200;
+                    // ⚖️ BALANCE: Start with 1 armor upgrade (20% damage reduction)
+                    this.upgrades.armor = 1;
                 }
             }
             
@@ -4763,7 +4831,7 @@
                 this.maxShieldCapacity = this.ship.shieldCapacity || 0;
                 this.currentShieldCapacity = this.maxShieldCapacity;
                 this.shieldRechargeDelay = 0;
-                this.shieldRechargeRate = 5; // 5% per second
+                this.shieldRechargeRate = 8; // ⚖️ BALANCE: Increased from 5% to 8% per second
                 
                 this.fireRate = (300 - (game.upgrades.attackSpeed * 30)) / this.ship.speed;
                 this.fireTimer = 0;
@@ -5046,7 +5114,7 @@
                     actualDamage = damageTaken;
                     this.currentShieldCapacity -= shieldAbsorption * 20; // Depletes shield
                     if (this.currentShieldCapacity < 0) this.currentShieldCapacity = 0;
-                    this.shieldRechargeDelay = 3000; // 3 second delay before recharge
+                    this.shieldRechargeDelay = 2000; // ⚖️ BALANCE: Reduced from 3s to 2s for better flow
 
                     this.game.createFloatingText(this.x, this.y - 30, `⚡${Math.floor(damageAbsorbed)} ABSORBED`, '#00ddff');
                 }
@@ -5321,8 +5389,8 @@
                 this.armor = 0.30; // ✨ FIXED: 30% damage reduction
                 this.speed = 0;
                 this.contactDamage = 50;
-                // 💰 AAA: Reduced boss credits by 30% (from 200+50*level to 140+35*level) for better balance
-                this.creditValue = 140 + (level * 35);
+                // ⚖️ BALANCE: Restored boss credits to original value (risk/reward balance)
+                this.creditValue = 200 + (level * 50);
                 this.width = 120 * sizeMultiplier;
                 this.height = 120 * sizeMultiplier;
                 this.size = 150 * sizeMultiplier;
