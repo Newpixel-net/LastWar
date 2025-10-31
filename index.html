@@ -3931,7 +3931,25 @@
                 }
                 
                 for (let i = this.particles.length - 1; i >= 0; i--) {
-                    this.particles[i].update(deltaTime);
+                    const particle = this.particles[i];
+
+                    // Handle both Particle instances and plain objects
+                    if (particle.update) {
+                        particle.update(deltaTime);
+                    } else {
+                        // Plain object particle (from weapons)
+                        if (particle.vx !== undefined && particle.vy !== undefined) {
+                            particle.x += particle.vx * (deltaTime / 16);
+                            particle.y += particle.vy * (deltaTime / 16);
+                            if (particle.vy !== undefined) particle.vy += 0.2 * (deltaTime / 16);
+                        }
+                        if (particle.decay) {
+                            particle.life -= particle.decay * (deltaTime / 16);
+                        } else if (particle.life !== undefined) {
+                            particle.life -= deltaTime / 1000; // Decrease by seconds
+                        }
+                    }
+
                     if (this.particles[i].life <= 0) {
                         this.particles.splice(i, 1);
                     }
@@ -4666,7 +4684,53 @@
                 }
                 
                 this.projectiles.forEach(proj => proj.render(this.ctx));
-                this.particles.forEach(particle => particle.render(this.ctx));
+
+                // Render particles (handle both Particle instances and plain objects)
+                this.particles.forEach(particle => {
+                    if (particle.render) {
+                        particle.render(this.ctx);
+                    } else {
+                        // Plain object particle - custom rendering
+                        this.ctx.save();
+
+                        if (particle.type === 'laser') {
+                            // Laser beam rendering
+                            const alpha = Math.min(particle.life / 0.3, 1);
+                            this.ctx.strokeStyle = particle.color || '#ffff00';
+                            this.ctx.lineWidth = 3;
+                            this.ctx.globalAlpha = alpha;
+                            this.ctx.shadowColor = particle.color || '#ffff00';
+                            this.ctx.shadowBlur = 10;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(particle.x1, particle.y1);
+                            this.ctx.lineTo(particle.x2, particle.y2);
+                            this.ctx.stroke();
+                            this.ctx.shadowBlur = 0;
+                        } else if (particle.radius) {
+                            // Explosion particle with radius
+                            const alpha = Math.min(particle.life, 1);
+                            this.ctx.fillStyle = particle.color || '#ff6600';
+                            this.ctx.globalAlpha = alpha;
+                            this.ctx.beginPath();
+                            this.ctx.arc(particle.x, particle.y, particle.radius * alpha, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        } else if (particle.size) {
+                            // Simple particle with size
+                            const alpha = Math.min(particle.life, 1);
+                            this.ctx.fillStyle = particle.color || '#ffffff';
+                            this.ctx.globalAlpha = alpha;
+                            this.ctx.fillRect(
+                                particle.x - particle.size / 2,
+                                particle.y - particle.size / 2,
+                                particle.size,
+                                particle.size
+                            );
+                        }
+
+                        this.ctx.restore();
+                    }
+                });
+
                 this.damageFields.forEach(field => field.render(this.ctx)); // 🌈 NEW: Render damage fields
                 this.floatingTexts.forEach(text => text.render(this.ctx));
 
@@ -6972,6 +7036,12 @@
             }
 
             shootAtBoss(drone) {
+                // Safety check: ensure boss still exists
+                if (!this.game.boss || this.game.boss.remove || this.game.boss.hp <= 0) {
+                    this.remove = true;
+                    return;
+                }
+
                 const droneX = this.game.boss.x + Math.cos(drone.angle) * drone.distance;
                 const droneY = this.game.boss.y + Math.sin(drone.angle) * drone.distance;
 
