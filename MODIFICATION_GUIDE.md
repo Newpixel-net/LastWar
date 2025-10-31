@@ -284,6 +284,13 @@ class Player {
 
 ## 🚨 Critical Rules
 
+For EVERY code update, my TODO list will ALWAYS start with:
+
+1. ✅ Update version number (FIRST!)
+2. ✅ Make code changes
+3. ✅ Test changes
+4. ✅ Commit and push
+
 ### ✅ **SAFE TO CHANGE:**
 - Numeric values (HP, damage, costs, timers, drop rates)
 - Text strings in UI (labels, titles, descriptions)
