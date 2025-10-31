@@ -715,8 +715,7 @@
         <!-- Main Menu -->
         <div id="mainMenu" class="screen active">
             <h1>LASTWAR<br>CYBER SURVIVAL</h1>
-            <p style="color: #ff006e; font-size: clamp(16px, 4vw, 20px); margin-bottom: 10px;">🚀 MEGA ULTRA EDITION 🚀</p>
-            <p style="color: #00ffff; font-size: clamp(12px, 3vw, 14px); margin-bottom: 20px; opacity: 0.8;">Version 0.1.1</p>
+            <p style="color: #ff006e; font-size: clamp(16px, 4vw, 20px); margin-bottom: 20px;">🚀 MEGA ULTRA EDITION 🚀</p>
             <p style="color: #ff00ff; font-size: clamp(14px, 3.5vw, 18px); margin-bottom: 10px;">⚡ PHASE 1: ATMOSPHERE 🛡️ + MUSIC 🎵 ⚡</p>
             <button class="button" onclick="game.showLevelSelect()">▶ START</button>
             <button class="button" onclick="game.toggleSound()">🔊 SOUND: <span id="soundStatus">ON</span></button>
@@ -3016,24 +3015,19 @@
             showGameOver() {
                 this.state = 'GAME_OVER';
                 this.audio.stopMusic();
-
+                
                 const stars = this.calculateStars();
-
-                // 🐛 FIX: Preserve 75% of earned credits even on death (positive feedback)
-                const deathPenalty = 0.75; // Player keeps 75% of earned credits
-                const creditsToAward = Math.floor(this.creditsThisRun * deathPenalty);
-                this.credits += creditsToAward;
-
+                
                 document.getElementById('earnedCredits').textContent = this.creditsThisRun;
                 document.getElementById('distanceTraveled').textContent = Math.floor(this.levelDistance / 10);
                 document.getElementById('maxCombo').textContent = this.maxCombo;
                 document.getElementById('starsEarned').textContent = stars;
-
+                
                 if (!this.levelStars[this.currentLevel] || stars > this.levelStars[this.currentLevel]) {
                     this.levelStars[this.currentLevel] = stars;
                     this.saveProgress();
                 }
-
+                
                 this.updateUI();
                 this.showScreen('gameOver');
             }
@@ -6850,7 +6844,7 @@
                 ];
                 this.centerWeapon = { id: 'bomb', icon: '☢️', name: 'ATOMIC BOMB' };
                 this.selectedWeapon = null;
-                this.wheelRadius = 60; // 🔧 UPGRADE: Even smaller for upper-right corner
+                this.wheelRadius = 70; // 🔧 FIXED: Smaller radius for compact UI
                 this.centerX = 0;
                 this.centerY = 0;
                 this.pulse = 0;
@@ -6858,9 +6852,9 @@
 
             show() {
                 this.visible = true;
-                // 🔧 UPGRADE: Position in upper-right corner for better visibility
-                this.centerX = this.game.width - 130;
-                this.centerY = 200; // Fixed upper position instead of center
+                // 🔧 FIXED: Position on right side of screen, not center
+                this.centerX = this.game.width - 120;
+                this.centerY = this.game.height / 2;
             }
 
             hide() {
@@ -6895,16 +6889,16 @@
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
                 ctx.beginPath();
-                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 35, 0, Math.PI * 2);
+                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 40, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // 🔧 UPGRADE: Compact title above wheel
+                // 🔧 FIXED: Compact title above wheel
                 ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-                ctx.font = 'bold 12px Courier New';
+                ctx.font = 'bold 14px Courier New';
                 ctx.textAlign = 'center';
-                ctx.fillText('WEAPONS', this.centerX, this.centerY - this.wheelRadius - 40);
+                ctx.fillText('WEAPONS', this.centerX, this.centerY - this.wheelRadius - 50);
 
                 // Render outer weapons
                 this.weapons.forEach((weapon, index) => {
@@ -6937,7 +6931,7 @@
                 }
 
                 ctx.beginPath();
-                ctx.arc(x, y, 30, 0, Math.PI * 2); // 🔧 UPGRADE: Even smaller circles (30px)
+                ctx.arc(x, y, 35, 0, Math.PI * 2); // 🔧 FIXED: Smaller circles (35px)
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
@@ -6950,20 +6944,20 @@
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
                     ctx.beginPath();
                     ctx.moveTo(x, y);
-                    ctx.arc(x, y, 30, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
+                    ctx.arc(x, y, 35, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
                     ctx.lineTo(x, y);
                     ctx.closePath();
                     ctx.fill();
 
                     // Cooldown text
                     ctx.fillStyle = '#ff0000';
-                    ctx.font = 'bold 12px Courier New';
+                    ctx.font = 'bold 14px Courier New';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(Math.ceil(cooldown / 1000) + 's', x, y);
                 } else {
                     // Weapon icon
-                    ctx.font = 'bold 24px Arial'; // 🔧 UPGRADE: Smaller icon for compact UI
+                    ctx.font = 'bold 28px Arial'; // 🔧 FIXED: Smaller icon
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillStyle = canUse ? '#fff' : '#555';
@@ -6973,14 +6967,14 @@
                 // Charge count
                 if (charges > 0) {
                     ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-                    ctx.font = 'bold 10px Courier New';
-                    ctx.fillText(`×${charges}`, x + 24, y - 24);
+                    ctx.font = 'bold 12px Courier New';
+                    ctx.fillText(`×${charges}`, x + 28, y - 28);
                 }
 
                 // Key number - smaller for compact UI
                 ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
-                ctx.font = 'bold 10px Courier New';
-                ctx.fillText(keyNumber.toString(), x, y + 38);
+                ctx.font = 'bold 12px Courier New';
+                ctx.fillText(keyNumber.toString(), x, y + 45);
 
                 // Weapon name - removed to save space
             }
@@ -7005,13 +6999,13 @@
                 }
 
                 ctx.beginPath();
-                ctx.arc(x, y, 38, 0, Math.PI * 2); // 🔧 UPGRADE: Smaller center (38px)
+                ctx.arc(x, y, 45, 0, Math.PI * 2); // 🔧 FIXED: Smaller center (45px)
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
                 // Icon
-                ctx.font = 'bold 30px Arial'; // 🔧 UPGRADE: Smaller icon
+                ctx.font = 'bold 36px Arial'; // 🔧 FIXED: Smaller icon
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = canUse ? '#fff' : '#555';
@@ -7020,18 +7014,18 @@
                 // Charge indicator or requirement
                 if (charges > 0) {
                     ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-                    ctx.font = 'bold 9px Courier New';
-                    ctx.fillText('READY!', x, y + 48);
+                    ctx.font = 'bold 11px Courier New';
+                    ctx.fillText('READY!', x, y + 55);
                 } else {
                     ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
-                    ctx.font = 'bold 8px Courier New';
-                    ctx.fillText('20 COMBO', x, y + 48);
+                    ctx.font = 'bold 10px Courier New';
+                    ctx.fillText('20 COMBO', x, y + 55);
                 }
 
                 // Key number
                 ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
-                ctx.font = 'bold 10px Courier New';
-                ctx.fillText('5', x, y - 48);
+                ctx.font = 'bold 12px Courier New';
+                ctx.fillText('5', x, y - 55);
             }
 
             // Check if mouse/touch is over a weapon
@@ -7041,12 +7035,12 @@
                     const wx = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
                     const wy = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
                     const dist = Math.hypot(x - wx, y - wy);
-                    if (dist < 30) return weapon.id; // 🔧 UPGRADE: Updated for new 30px radius
+                    if (dist < 35) return weapon.id; // 🔧 FIXED: Use new radius
                 }
 
                 // Check center weapon
                 const distCenter = Math.hypot(x - this.centerX, y - this.centerY);
-                if (distCenter < 38) return this.centerWeapon.id; // 🔧 UPGRADE: Updated for new 38px radius
+                if (distCenter < 45) return this.centerWeapon.id; // 🔧 FIXED: Use new radius
 
                 return null;
             }
