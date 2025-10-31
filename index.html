@@ -3964,6 +3964,10 @@
                 for (let i = this.activeWeapons.length - 1; i >= 0; i--) {
                     this.activeWeapons[i].update(deltaTime);
                     if (this.activeWeapons[i].remove) {
+                        // Call cleanup if the weapon has it
+                        if (this.activeWeapons[i].cleanup) {
+                            this.activeWeapons[i].cleanup();
+                        }
                         this.activeWeapons.splice(i, 1);
                     }
                 }
@@ -6496,6 +6500,7 @@
                 this.frozenEnemies = new Set();
                 this.originalEnemySpeeds = new Map();
                 this.totalDuration = 6000; // Total effect duration
+                this.bossOriginalSpeed = null; // Store boss speed for restoration
             }
 
             update(deltaTime) {
@@ -6593,6 +6598,13 @@
                             // Add frozen visual flag
                             enemy.frozen = true;
                         }
+                    } else {
+                        // Boss is slowed by 50% instead of completely frozen
+                        if (this.bossOriginalSpeed === null) {
+                            this.bossOriginalSpeed = enemy.speed;
+                            enemy.speed = enemy.speed * 0.5;
+                            enemy.frozen = true;
+                        }
                     }
                 });
 
@@ -6617,6 +6629,13 @@
                 });
                 this.frozenEnemies.clear();
                 this.originalEnemySpeeds.clear();
+
+                // Restore boss speed
+                if (this.game.boss && !this.game.boss.remove && this.bossOriginalSpeed !== null) {
+                    this.game.boss.speed = this.bossOriginalSpeed;
+                    this.game.boss.frozen = false;
+                    this.bossOriginalSpeed = null;
+                }
             }
 
             dealDamage() {
@@ -6635,6 +6654,19 @@
                         );
                     }
                 });
+
+                // Deal damage to boss (slowed, not fully frozen)
+                if (this.game.boss && !this.game.boss.remove && this.game.boss.hp > 0) {
+                    const bossDamage = 100; // Higher damage for boss
+                    this.game.boss.hp -= bossDamage;
+                    this.game.createFloatingText(
+                        this.game.boss.x,
+                        this.game.boss.y,
+                        `-${bossDamage}`,
+                        '#00ffff',
+                        32
+                    );
+                }
             }
 
             render(ctx) {
@@ -6850,7 +6882,7 @@
                 }
             }
 
-            draw(ctx) {
+            render(ctx) {
                 this.missiles.forEach(missile => {
                     if (!missile.active) return;
 
@@ -6967,7 +6999,7 @@
                 );
             }
 
-            draw(ctx) {
+            render(ctx) {
                 if (!this.game.boss || this.game.boss.remove) return;
 
                 this.drones.forEach(drone => {
@@ -7096,7 +7128,7 @@
                 return segments;
             }
 
-            draw(ctx) {
+            render(ctx) {
                 ctx.strokeStyle = '#ffff00';
                 ctx.lineWidth = 3;
                 ctx.shadowColor = '#ffff00';
