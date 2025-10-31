@@ -45,11 +45,11 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         #gameCanvas {
-            width: 100%;
-            height: 100%;
             display: block;
             touch-action: none;
             /* CRITICAL: Enable crisp rendering on 4K/large displays */
@@ -882,12 +882,15 @@
                 const ctx = this.canvas.getContext('2d');
                 ctx.scale(this.dpr, this.dpr);
 
-                // CSS size remains logical pixels
-                this.canvas.style.width = this.baseWidth + 'px';
-                this.canvas.style.height = this.baseHeight + 'px';
+                // CSS size scales to fill screen while maintaining aspect ratio
+                const scaledWidth = this.baseWidth * this.scale;
+                const scaledHeight = this.baseHeight * this.scale;
+                this.canvas.style.width = scaledWidth + 'px';
+                this.canvas.style.height = scaledHeight + 'px';
 
-                this.offsetX = (containerWidth - (this.baseWidth * this.scale)) / 2;
-                this.offsetY = (containerHeight - (this.baseHeight * this.scale)) / 2;
+                // Center the canvas in the container
+                this.offsetX = (containerWidth - scaledWidth) / 2;
+                this.offsetY = (containerHeight - scaledHeight) / 2;
             }
 
             getMousePos(clientX, clientY) {
