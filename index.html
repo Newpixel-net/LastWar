@@ -849,30 +849,44 @@
                 this.scale = 1;
                 this.offsetX = 0;
                 this.offsetY = 0;
-                
+                this.dpr = window.devicePixelRatio || 1; // 4K/HD support
+
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
                 window.addEventListener('orientationchange', () => {
                     setTimeout(() => this.resize(), 100);
                 });
             }
-            
+
             resize() {
                 const container = this.canvas.parentElement;
                 const containerWidth = container.clientWidth;
                 const containerHeight = container.clientHeight;
-                
+
                 const scaleX = containerWidth / this.baseWidth;
                 const scaleY = containerHeight / this.baseHeight;
                 this.scale = Math.min(scaleX, scaleY);
-                
-                this.canvas.width = this.baseWidth;
-                this.canvas.height = this.baseHeight;
-                
+
+                // CRITICAL FIX: Add high-DPI support for 4K/Retina displays
+                // Update devicePixelRatio (can change when moving window between monitors)
+                this.dpr = window.devicePixelRatio || 1;
+
+                // Set canvas internal resolution based on DPI
+                this.canvas.width = this.baseWidth * this.dpr;
+                this.canvas.height = this.baseHeight * this.dpr;
+
+                // Scale canvas context to match DPI
+                const ctx = this.canvas.getContext('2d');
+                ctx.scale(this.dpr, this.dpr);
+
+                // CSS size remains logical pixels
+                this.canvas.style.width = this.baseWidth + 'px';
+                this.canvas.style.height = this.baseHeight + 'px';
+
                 this.offsetX = (containerWidth - (this.baseWidth * this.scale)) / 2;
                 this.offsetY = (containerHeight - (this.baseHeight * this.scale)) / 2;
             }
-            
+
             getMousePos(clientX, clientY) {
                 const rect = this.canvas.getBoundingClientRect();
                 return {
@@ -3884,8 +3898,10 @@
                     if (this.enemies[i].isBoss && this.enemies[i].isLocked) {
                         continue;
                     }
-                    
-                    if (this.enemies[i].y > this.player.y - 30 && 
+
+                    // CRITICAL FIX: Add player null check before accessing player properties
+                    if (this.player &&
+                        this.enemies[i].y > this.player.y - 30 &&
                         this.enemies[i].lane === this.player.lane &&
                         !this.player.invincible) {
                         this.player.takeDamage(this.enemies[i].contactDamage);
@@ -3893,29 +3909,32 @@
                         this.enemies.splice(i, 1);
                         continue;
                     }
-                    
+
                     if (this.enemies[i].y > this.height + 50) {
                         // ☠▯ ULTIMATE: Enemy Pass Penalty - Player loses 5 HP when enemy escapes!
                         if (this.player && !this.enemies[i].passedPenaltyApplied && !this.enemies[i].isBoss) {
                             this.player.hp -= 5; // Changed from -1 to -5 HP
                             this.damageTaken += 5;
-                            
+
+                            // CRITICAL FIX: Set flag to prevent multiple penalties
+                            this.enemies[i].passedPenaltyApplied = true;
+
                             // Red flash effect
                             this.flashIntensity = 0.7; // Stronger flash for bigger penalty
-                            
+
                             // Floating text at player position
                             this.createFloatingText(this.player.x, this.player.y - 40, '-5 HP MISS! ☠▯', '#ff0033');
-                            
+
                             // Stronger screen shake for feedback
                             this.addScreenShake(8);
-                            
+
                             // Audio feedback
                             this.audio.playDamage();
-                            
+
                             // Red particles at player
                             this.createParticles(this.player.x, this.player.y, 10, '#ff0033');
                         }
-                        
+
                         this.enemies.splice(i, 1);
                     }
                 }
@@ -5976,7 +5995,8 @@
                 }
                 
                 this.dodgeTimer -= deltaTime;
-                if (this.dodgeTimer <= 0 && Math.random() < 0.4) {
+                // CRITICAL FIX: Add player null check before accessing player.lane
+                if (this.game.player && this.dodgeTimer <= 0 && Math.random() < 0.4) {
                     const playerLane = this.game.player.lane;
                     const avoidPlayer = Math.random() < 0.6;
                     if (avoidPlayer && playerLane === this.targetLane) {
@@ -6010,12 +6030,18 @@
                 switch(this.attackPattern) {
                     case 'SINGLE':
                         // ✨ PHASE 1: Single lane pursuit (Easy)
-                        this.nextAttackLanes = [this.game.player.lane];
-                        setTimeout(() => {
-                            this.game.enemyProjectiles.push(
-                                new EnemyProjectile(this.game.getLaneX(this.game.player.lane), this.y + 60, this.game.player.lane, this.game)
-                            );
-                        }, 1500);
+                        // CRITICAL FIX: Add player null check
+                        if (this.game.player) {
+                            this.nextAttackLanes = [this.game.player.lane];
+                            setTimeout(() => {
+                                // CRITICAL FIX: Verify entities still exist when timeout fires
+                                if (this.game && this.game.player && this.game.boss && !this.remove) {
+                                    this.game.enemyProjectiles.push(
+                                        new EnemyProjectile(this.game.getLaneX(this.game.player.lane), this.y + 60, this.game.player.lane, this.game)
+                                    );
+                                }
+                            }, 1500);
+                        }
                         break;
                         
                     case 'SPREAD':
@@ -6023,14 +6049,17 @@
                         const sweepLeft = Math.random() < 0.5;
                         this.nextAttackLanes = sweepLeft ? [0, 1] : [1, 2];
                         setTimeout(() => {
-                            this.nextAttackLanes.forEach(lane => {
-                                this.game.enemyProjectiles.push(
-                                    new EnemyProjectile(this.game.getLaneX(lane), this.y + 60, lane, this.game)
-                                );
-                            });
+                            // CRITICAL FIX: Verify entities still exist when timeout fires
+                            if (this.game && this.game.boss && !this.remove) {
+                                this.nextAttackLanes.forEach(lane => {
+                                    this.game.enemyProjectiles.push(
+                                        new EnemyProjectile(this.game.getLaneX(lane), this.y + 60, lane, this.game)
+                                    );
+                                });
+                            }
                         }, 1500);
                         break;
-                        
+
                     case 'RAPID':
                         // ✨ PHASE 3: Random dual - 2 random lanes, 1 always safe (Hard)
                         const allLanes = [0, 1, 2];
@@ -6038,24 +6067,33 @@
                         allLanes.splice(safeLane, 1);
                         this.nextAttackLanes = allLanes;
                         setTimeout(() => {
-                            this.nextAttackLanes.forEach(lane => {
-                                this.game.enemyProjectiles.push(
-                                    new EnemyProjectile(this.game.getLaneX(lane), this.y + 60, lane, this.game)
-                                );
-                            });
+                            // CRITICAL FIX: Verify entities still exist when timeout fires
+                            if (this.game && this.game.boss && !this.remove) {
+                                this.nextAttackLanes.forEach(lane => {
+                                    this.game.enemyProjectiles.push(
+                                        new EnemyProjectile(this.game.getLaneX(lane), this.y + 60, lane, this.game)
+                                    );
+                                });
+                            }
                         }, 1500);
                         break;
-                        
+
                     case 'BERSERK':
                         // ✨ PHASE 4: Rapid pursuit - fast single shots, dodgeable (Very Hard)
-                        this.nextAttackLanes = [this.game.player.lane];
-                        for (let i = 0; i < 4; i++) {
-                            setTimeout(() => {
-                                const lane = this.game.player.lane;
-                                this.game.enemyProjectiles.push(
-                                    new EnemyProjectile(this.game.getLaneX(lane), this.y + 60, lane, this.game)
-                                );
-                            }, 1500 + (i * 250));
+                        // CRITICAL FIX: Add player null check
+                        if (this.game.player) {
+                            this.nextAttackLanes = [this.game.player.lane];
+                            for (let i = 0; i < 4; i++) {
+                                setTimeout(() => {
+                                    // CRITICAL FIX: Verify entities still exist when timeout fires
+                                    if (this.game && this.game.player && this.game.boss && !this.remove) {
+                                        const lane = this.game.player.lane;
+                                        this.game.enemyProjectiles.push(
+                                            new EnemyProjectile(this.game.getLaneX(lane), this.y + 60, lane, this.game)
+                                        );
+                                    }
+                                }, 1500 + (i * 250));
+                            }
                         }
                         break;
                 }
@@ -6076,11 +6114,14 @@
 
                 for (let i = 0; i < minionCount; i++) {
                     setTimeout(() => {
-                        const lane = Math.floor(Math.random() * 3);
-                        const minion = new Enemy(lane, this.y + 100, 'drone', this.game.currentLevel, this.game);
-                        minion.speed = 1.5 + (this.phase * 0.3); // ⚡ Reduced speed multiplier from 0.5 to 0.3
-                        this.game.enemies.push(minion);
-                        this.game.createParticles(this.game.getLaneX(lane), this.y + 100, 10, '#ff00ff');
+                        // CRITICAL FIX: Verify boss and game still exist when timeout fires
+                        if (this.game && this.game.boss && !this.remove) {
+                            const lane = Math.floor(Math.random() * 3);
+                            const minion = new Enemy(lane, this.y + 100, 'drone', this.game.currentLevel, this.game);
+                            minion.speed = 1.5 + (this.phase * 0.3); // ⚡ Reduced speed multiplier from 0.5 to 0.3
+                            this.game.enemies.push(minion);
+                            this.game.createParticles(this.game.getLaneX(lane), this.y + 100, 10, '#ff00ff');
+                        }
                     }, i * 300); // ⚡ Increased delay from 200ms to 300ms
                 }
             }
