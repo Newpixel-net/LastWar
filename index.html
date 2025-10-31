@@ -716,7 +716,7 @@
         <div id="mainMenu" class="screen active">
             <h1>LASTWAR<br>CYBER SURVIVAL</h1>
             <p style="color: #ff006e; font-size: clamp(16px, 4vw, 20px); margin-bottom: 10px;">🚀 MEGA ULTRA EDITION 🚀</p>
-            <p style="color: #00ffff; font-size: clamp(12px, 3vw, 14px); margin-bottom: 20px; opacity: 0.8;">Version 0.1.1</p>
+            <p style="color: #00ffff; font-size: clamp(12px, 3vw, 14px); margin-bottom: 20px; opacity: 0.8;">Version 0.1.2</p>
             <p style="color: #ff00ff; font-size: clamp(14px, 3.5vw, 18px); margin-bottom: 10px;">⚡ PHASE 1: ATMOSPHERE 🛡️ + MUSIC 🎵 ⚡</p>
             <button class="button" onclick="game.showLevelSelect()">▶ START</button>
             <button class="button" onclick="game.toggleSound()">🔊 SOUND: <span id="soundStatus">ON</span></button>
@@ -3893,7 +3893,8 @@
                             proj.lane === enemy.lane;
                         
                         if (inLane && proj.y < enemy.y + enemy.height && proj.y > enemy.y - 10) {
-                            let damage = 10 + (this.upgrades.firepower * 2.5);
+                            // ⚖️ BALANCE v0.1.2: Increased base damage from 10 to 12
+                            let damage = 12 + (this.upgrades.firepower * 2.5);
 
                             if (proj.type === 'electric') damage *= 1.5;
                             if (proj.type === 'fire') damage *= 1.3;
@@ -3906,12 +3907,12 @@
                                 this.createFloatingText(enemy.x, enemy.y, 'CRIT!', '#ffff00');
                                 this.hitStop = 30;
                             }
-                            
+
                             // 🛡️ Safety check before calling takeDamage
                             if (enemy && typeof enemy.takeDamage === 'function') {
                                 enemy.takeDamage(damage);
                                 // 🚀 AAA: Enhanced hit markers with size based on damage
-                                const isCrit = Math.floor(damage) > (10 + (this.upgrades.firepower * 2.5)) * 1.5;
+                                const isCrit = Math.floor(damage) > (12 + (this.upgrades.firepower * 2.5)) * 1.5;
                                 const hitColor = isCrit ? '#ffff00' : '#ff0033';
                                 this.createFloatingText(enemy.x, enemy.y, '-' + Math.floor(damage), hitColor);
 
@@ -5565,9 +5566,24 @@
                 super(lane, y, 'drone', level, game);
                 this.isBoss = true;
                 const sizeMultiplier = 1 + Math.floor(level / 5);
-                this.hp = 700 + (level * 700); // ✨ FIXED: Much tankier - 1400 HP at level 2
+
+                // ⚖️ BALANCE v0.1.2: Progressive HP scaling for early levels
+                if (level <= 5) {
+                    // Levels 1-5: 40% reduction for learning curve
+                    // Level 1: 840 HP, Level 5: 2100 HP
+                    this.hp = 420 + (level * 420);
+                } else {
+                    // Levels 6+: Full challenge
+                    this.hp = 700 + (level * 700);
+                }
                 this.maxHp = this.hp;
-                this.armor = 0.30; // ✨ FIXED: 30% damage reduction
+
+                // ⚖️ BALANCE v0.1.2: Progressive armor for early levels
+                if (level <= 5) {
+                    this.armor = 0.15; // 15% damage reduction for levels 1-5
+                } else {
+                    this.armor = 0.30; // 30% damage reduction for levels 6+
+                }
                 this.speed = 0;
                 this.contactDamage = 50;
                 // ⚖️ BALANCE: Restored boss credits to original value (risk/reward balance)
@@ -6850,7 +6866,7 @@
                 ];
                 this.centerWeapon = { id: 'bomb', icon: '☢️', name: 'ATOMIC BOMB' };
                 this.selectedWeapon = null;
-                this.wheelRadius = 60; // 🔧 UPGRADE: Even smaller for upper-right corner
+                this.wheelRadius = 30; // 🔧 v0.1.2: 50% smaller (was 60px)
                 this.centerX = 0;
                 this.centerY = 0;
                 this.pulse = 0;
@@ -6858,9 +6874,10 @@
 
             show() {
                 this.visible = true;
-                // 🔧 UPGRADE: Position in upper-right corner for better visibility
-                this.centerX = this.game.width - 130;
-                this.centerY = 200; // Fixed upper position instead of center
+                // 🔧 v0.1.2: Position in LOWER-RIGHT corner for better UX
+                // Position: 90px from right, 120px from bottom (above HP bar)
+                this.centerX = this.game.width - 90;
+                this.centerY = this.game.height - 120;
             }
 
             hide() {
@@ -6889,22 +6906,23 @@
                 // 🔧 FIXED: No full-screen overlay - keep game visible like mobile games
 
                 // Background circle - semi-transparent
-                ctx.fillStyle = 'rgba(20, 20, 20, 0.7)'; // 🔧 FIXED: More transparent
-                ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)'; // 🔧 FIXED: Transparent gold border
+                ctx.fillStyle = 'rgba(20, 20, 20, 0.7)';
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
                 ctx.lineWidth = 2;
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
                 ctx.beginPath();
-                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 35, 0, Math.PI * 2);
+                // 🔧 v0.1.2: 50% smaller background (+18px instead of +35px)
+                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 18, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // 🔧 UPGRADE: Compact title above wheel
+                // 🔧 v0.1.2: Compact title above wheel
                 ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-                ctx.font = 'bold 12px Courier New';
+                ctx.font = 'bold 10px Courier New';
                 ctx.textAlign = 'center';
-                ctx.fillText('WEAPONS', this.centerX, this.centerY - this.wheelRadius - 40);
+                ctx.fillText('WEAPONS', this.centerX, this.centerY - this.wheelRadius - 20);
 
                 // Render outer weapons
                 this.weapons.forEach((weapon, index) => {
@@ -6937,7 +6955,8 @@
                 }
 
                 ctx.beginPath();
-                ctx.arc(x, y, 30, 0, Math.PI * 2); // 🔧 UPGRADE: Even smaller circles (30px)
+                // 🔧 v0.1.2: 50% smaller circles (15px instead of 30px)
+                ctx.arc(x, y, 15, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
@@ -6950,20 +6969,20 @@
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
                     ctx.beginPath();
                     ctx.moveTo(x, y);
-                    ctx.arc(x, y, 30, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
+                    ctx.arc(x, y, 15, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
                     ctx.lineTo(x, y);
                     ctx.closePath();
                     ctx.fill();
 
                     // Cooldown text
                     ctx.fillStyle = '#ff0000';
-                    ctx.font = 'bold 12px Courier New';
+                    ctx.font = 'bold 10px Courier New';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(Math.ceil(cooldown / 1000) + 's', x, y);
                 } else {
                     // Weapon icon
-                    ctx.font = 'bold 24px Arial'; // 🔧 UPGRADE: Smaller icon for compact UI
+                    ctx.font = 'bold 18px Arial'; // 🔧 v0.1.2: Smaller icon (18px instead of 24px)
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillStyle = canUse ? '#fff' : '#555';
@@ -6973,14 +6992,14 @@
                 // Charge count
                 if (charges > 0) {
                     ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-                    ctx.font = 'bold 10px Courier New';
-                    ctx.fillText(`×${charges}`, x + 24, y - 24);
+                    ctx.font = 'bold 8px Courier New';
+                    ctx.fillText(`×${charges}`, x + 12, y - 12);
                 }
 
                 // Key number - smaller for compact UI
                 ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
-                ctx.font = 'bold 10px Courier New';
-                ctx.fillText(keyNumber.toString(), x, y + 38);
+                ctx.font = 'bold 8px Courier New';
+                ctx.fillText(keyNumber.toString(), x, y + 20);
 
                 // Weapon name - removed to save space
             }
@@ -7005,13 +7024,14 @@
                 }
 
                 ctx.beginPath();
-                ctx.arc(x, y, 38, 0, Math.PI * 2); // 🔧 UPGRADE: Smaller center (38px)
+                // 🔧 v0.1.2: 50% smaller center (19px instead of 38px)
+                ctx.arc(x, y, 19, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
                 // Icon
-                ctx.font = 'bold 30px Arial'; // 🔧 UPGRADE: Smaller icon
+                ctx.font = 'bold 22px Arial'; // 🔧 v0.1.2: Smaller icon (22px instead of 30px)
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = canUse ? '#fff' : '#555';
@@ -7020,18 +7040,18 @@
                 // Charge indicator or requirement
                 if (charges > 0) {
                     ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-                    ctx.font = 'bold 9px Courier New';
-                    ctx.fillText('READY!', x, y + 48);
+                    ctx.font = 'bold 7px Courier New';
+                    ctx.fillText('READY!', x, y + 26);
                 } else {
                     ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
-                    ctx.font = 'bold 8px Courier New';
-                    ctx.fillText('20 COMBO', x, y + 48);
+                    ctx.font = 'bold 7px Courier New';
+                    ctx.fillText('20 COMBO', x, y + 26);
                 }
 
                 // Key number
                 ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
-                ctx.font = 'bold 10px Courier New';
-                ctx.fillText('5', x, y - 48);
+                ctx.font = 'bold 8px Courier New';
+                ctx.fillText('5', x, y - 26);
             }
 
             // Check if mouse/touch is over a weapon
@@ -7041,12 +7061,12 @@
                     const wx = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
                     const wy = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
                     const dist = Math.hypot(x - wx, y - wy);
-                    if (dist < 30) return weapon.id; // 🔧 UPGRADE: Updated for new 30px radius
+                    if (dist < 15) return weapon.id; // 🔧 v0.1.2: Updated for new 15px radius
                 }
 
                 // Check center weapon
                 const distCenter = Math.hypot(x - this.centerX, y - this.centerY);
-                if (distCenter < 38) return this.centerWeapon.id; // 🔧 UPGRADE: Updated for new 38px radius
+                if (distCenter < 19) return this.centerWeapon.id; // 🔧 v0.1.2: Updated for new 19px radius
 
                 return null;
             }
