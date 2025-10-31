@@ -1394,13 +1394,16 @@
                 const bossFactor = bossBattle ? 0.8 : 0;
                 
                 this.targetIntensity = Math.min(
-                    enemyFactor * 0.3 + 
-                    comboFactor * 0.25 + 
-                    progressFactor * 0.25 + 
+                    enemyFactor * 0.3 +
+                    comboFactor * 0.25 +
+                    progressFactor * 0.25 +
                     bossFactor * 0.2,
                     1
                 );
-                
+
+                // 🎵 Ensure minimum intensity so music always plays during gameplay
+                this.targetIntensity = Math.max(this.targetIntensity, 0.3);
+
                 // Smooth transition
                 const smoothing = 0.05;
                 this.combatIntensity += (this.targetIntensity - this.combatIntensity) * smoothing;
@@ -1631,24 +1634,24 @@
                 let pitch = 0.5; // Will be reduced further by 50% in speak()
                 let currentTier = 0;
 
-                // 🔊 FIXED: Mortal Kombat style - aggressive, warlike announcements
+                // 🔊 Deep announcer voice - dramatic, warlike tone (MK-inspired, not MK-branded)
                 if (comboCount >= 50) {
-                    message = 'FLAWLESS VICTORY!';
+                    message = 'LEGENDARY COMBO!';
                     rate = 0.6;
                     pitch = 0.3;
                     currentTier = 5;
                 } else if (comboCount >= 40) {
-                    message = 'ANNIHILATION!';
+                    message = 'DEVASTATING!';
                     rate = 0.65;
                     pitch = 0.4;
                     currentTier = 4;
                 } else if (comboCount >= 30) {
-                    message = 'BRUTALITY!';
+                    message = 'DOMINATING!';
                     rate = 0.7;
                     pitch = 0.5;
                     currentTier = 3;
                 } else if (comboCount >= 20) {
-                    message = 'FINISH HIM!';
+                    message = 'OVERWHELMING!';
                     rate = 0.75;
                     pitch = 0.6;
                     currentTier = 2;
@@ -1666,8 +1669,8 @@
             }
 
             speakLifesteal() {
-                // 🔊 FIXED: Lower pitch for consistency
-                this.speak("BLOOD LUST!", 0.9, 0.8);
+                // 🔊 Deep announcer voice for lifesteal effect
+                this.speak("LIFE DRAIN!", 0.9, 0.8);
             }
             
             resetComboTier() {
@@ -1676,8 +1679,8 @@
             
             speakBossDefeat() {
                 if (!this.enabled) return;
-                // 🔊 FIXED: More dramatic, Mortal Kombat style
-                this.speak("FATALITY!", 0.6, 0.4);
+                // 🔊 Deep announcer voice for boss defeat - dramatic and powerful
+                this.speak("VICTORY!", 0.6, 0.4);
             }
             
             toggle() {
@@ -4070,12 +4073,12 @@
                 }
                 
                 if (enemy.isBoss) {
-                    // 🎬 ULTIMATE: SPECTACULAR 4-second boss defeat celebration!
+                    // 🎬 ULTIMATE: SPECTACULAR 7.5-second boss defeat celebration!
                     this.bossDefeated = true;
-                    this.bossDefeatTimer = 4000; // Perfect timing for smooth transition
+                    this.bossDefeatTimer = 7500; // Extended for full victory experience
                     this.bossBattlePhase = 'VICTORY';
                     this.slowMotion = 0.15; // Even slower for maximum dramatic impact
-                    this.slowMotionTimer = 4000;
+                    this.slowMotionTimer = 7500;
                     this.flashIntensity = 2; // More intense flash
                     this.addScreenShake(40); // Stronger shake
                     
@@ -4804,7 +4807,7 @@
                 if (!data) return;
                 
                 const elapsed = Date.now() - data.startTime;
-                const progress = Math.min(elapsed / 4000, 1); // Extended to 4s to match timer
+                const progress = Math.min(elapsed / 7500, 1); // Extended to 7.5s to match timer
                 
                 // Dark overlay - STAY SOLID, no pulsing fade
                 const overlayAlpha = 0.85; // Keep it dark and solid
