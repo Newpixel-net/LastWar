@@ -789,7 +789,7 @@
                     <p>Stars Earned: <span id="starsEarned">0</span> ⭐</p>
                 </div>
                 <button class="button" onclick="game.retry()">🔄 RETRY</button>
-                <button class="button" onclick="game.showLevelSelect()">Ã¢Â¬â€  UPGRADE</button>
+                <button class="button" onclick="game.showLevelSelect()">⬆️ UPGRADE</button>
                 <button class="button" onclick="game.showMainMenu()">🏠 EXIT</button>
             </div>
         </div>
@@ -1097,19 +1097,30 @@
             // ========================================
             
             startMusic(theme) {
-                if (!this.enabled || !this.audioContext) return;
+                if (!this.enabled) return;
+
+                // 🔊 FIX: Handle missing audio context
+                if (!this.audioContext) {
+                    console.warn('Audio context not initialized');
+                    return;
+                }
+
                 this.stopMusic();
-                
+
                 this.currentTheme = theme;
-                
+
                 // Find matching theme index
                 this.currentThemeIndex = this.themes.findIndex(t => t.name === theme.name) || 0;
-                
-                // Resume audio context if suspended
+
+                // 🔊 FIX: Resume audio context if suspended (browser autoplay policy)
                 if (this.audioContext.state === 'suspended') {
-                    this.audioContext.resume();
+                    this.audioContext.resume().then(() => {
+                        console.log('🎵 Audio context resumed - music should play now');
+                    }).catch(err => {
+                        console.error('Failed to resume audio:', err);
+                    });
                 }
-                
+
                 this.isPlaying = true;
                 this.step = 0;
                 this.bar = 0;
@@ -1584,22 +1595,25 @@
                     const utterance = new SpeechSynthesisUtterance(text);
                     
                     const voices = window.speechSynthesis.getVoices();
-                    
-                    const deepVoice = voices.find(voice => 
-                        (voice.lang.startsWith('en-US')) && 
-                        (voice.name.toLowerCase().includes('male') || 
-                         voice.name.toLowerCase().includes('man') ||
-                         voice.name.toLowerCase().includes('david') ||
-                         voice.name.toLowerCase().includes('aaron') ||
-                         voice.name.toLowerCase().includes('james'))
+
+                    // 🔊 FIXED: Prefer deepest American male voices (Mortal Kombat style)
+                    const deepVoice = voices.find(voice =>
+                        (voice.lang.startsWith('en-US')) &&
+                        (voice.name.toLowerCase().includes('aaron') ||
+                         voice.name.toLowerCase().includes('fred') ||
+                         voice.name.toLowerCase().includes('daniel'))
+                    ) || voices.find(voice =>
+                        (voice.lang.startsWith('en-US')) &&
+                        (voice.name.toLowerCase().includes('male') ||
+                         voice.name.toLowerCase().includes('man'))
                     ) || voices.find(voice => voice.lang.startsWith('en-US')) || voices[0];
-                    
+
                     if (deepVoice) {
                         utterance.voice = deepVoice;
                     }
-                    
+
                     utterance.rate = rate;
-                    utterance.pitch = pitch;
+                    utterance.pitch = pitch * 0.5; // 🔊 FIXED: Much lower pitch (50% reduction)
                     utterance.volume = 1.0;
                     
                     window.speechSynthesis.speak(utterance);
@@ -1610,47 +1624,49 @@
             
             speakCombo(comboCount) {
                 if (!this.enabled) return;
-                
+
                 let message = '';
                 let rate = 1.0;
-                let pitch = 0.38;
+                let pitch = 0.5; // Will be reduced further by 50% in speak()
                 let currentTier = 0;
-                
+
+                // 🔊 FIXED: Mortal Kombat style - aggressive, warlike announcements
                 if (comboCount >= 50) {
-                    message = 'GOD COMBO!';
-                    rate = 0.7;
-                    pitch = 0.18;
+                    message = 'FLAWLESS VICTORY!';
+                    rate = 0.6;
+                    pitch = 0.3;
                     currentTier = 5;
                 } else if (comboCount >= 40) {
-                    message = 'ULTIMATE COMBO!';
-                    rate = 0.75;
-                    pitch = 0.28;
+                    message = 'ANNIHILATION!';
+                    rate = 0.65;
+                    pitch = 0.4;
                     currentTier = 4;
                 } else if (comboCount >= 30) {
-                    message = 'Awesome combo!';
-                    rate = 0.8;
-                    pitch = 0.33;
+                    message = 'BRUTALITY!';
+                    rate = 0.7;
+                    pitch = 0.5;
                     currentTier = 3;
                 } else if (comboCount >= 20) {
-                    message = 'Cool combo!';
-                    rate = 0.85;
-                    pitch = 0.38;
+                    message = 'FINISH HIM!';
+                    rate = 0.75;
+                    pitch = 0.6;
                     currentTier = 2;
                 } else if (comboCount >= 10) {
-                    message = 'Nice combo!';
-                    rate = 0.9;
-                    pitch = 0.43;
+                    message = 'UNSTOPPABLE!';
+                    rate = 0.8;
+                    pitch = 0.7;
                     currentTier = 1;
                 }
-                
+
                 if (currentTier > 0 && currentTier !== this.lastComboTier) {
                     this.lastComboTier = currentTier;
                     this.speak(message, rate, pitch);
                 }
             }
-            
+
             speakLifesteal() {
-                this.speak("Lifesteal!", 1.4, 1.1);
+                // 🔊 FIXED: Lower pitch for consistency
+                this.speak("BLOOD LUST!", 0.9, 0.8);
             }
             
             resetComboTier() {
@@ -1659,7 +1675,8 @@
             
             speakBossDefeat() {
                 if (!this.enabled) return;
-                this.speak("BOSS DEFEATED!", 0.7, 0.23);
+                // 🔊 FIXED: More dramatic, Mortal Kombat style
+                this.speak("FATALITY!", 0.6, 0.4);
             }
             
             toggle() {
@@ -2210,7 +2227,7 @@
                 cost: 0,
                 speed: 1.0,
                 size: 1.0,
-                shieldCapacity: 30, // 🛡️ AAA: New parameter - absorbs 30% of damage before HP
+                shieldCapacity: 50, // ⚖️ BALANCE: Increased from 30 to 50 for better survivability
                 critChance: 0.15, // 🎯 AAA: New parameter - 15% crit chance (up from base 10%)
                 desc: 'Balanced fighter',
                 ability: null,
@@ -2777,7 +2794,13 @@
                 this.soundEnabled = true;
                 this.audio = new AudioManager();
                 this.achievements = new AchievementManager();
-                
+
+                // 🔫 Boss Weapon System
+                this.weaponCharges = new WeaponChargeSystem(this);
+                this.weaponWheel = new RadialWeaponWheel(this);
+                this.activeWeapons = []; // Currently active weapon instances
+                this.timeScale = 1.0; // For slow-motion effects
+
                 this.keys = {};
                 this.touches = { startX: 0, startY: 0 };
                 this.mousePos = { x: 0, y: 0 };
@@ -2838,6 +2861,30 @@
                         if ((e.key === ' ' || e.key === 'Spacebar') && this.player) {
                             this.player.useAbility();
                         }
+
+                        // 🔫 Weapon wheel keyboard controls
+                        if (this.weaponWheel && this.weaponWheel.visible) {
+                            const weaponMap = {
+                                '1': 'freeze',
+                                '2': 'drone',
+                                '3': 'stink',
+                                '4': 'shock',
+                                '5': 'bomb'
+                            };
+
+                            if (weaponMap[e.key]) {
+                                this.weaponWheel.selectWeapon(weaponMap[e.key]);
+                            }
+                        }
+
+                        // 🔫 Toggle weapon wheel with 'W' key during boss battles
+                        if (e.key.toLowerCase() === 'w' && this.boss && this.boss.hp > 0) {
+                            if (this.weaponWheel.visible) {
+                                this.weaponWheel.hide();
+                            } else {
+                                this.weaponWheel.show();
+                            }
+                        }
                     }
                 });
                 
@@ -2852,6 +2899,16 @@
                 this.canvas.addEventListener('click', (e) => {
                     if (this.state === 'PLAYING') {
                         const pos = this.responsiveCanvas.getMousePos(e.clientX, e.clientY);
+
+                        // 🔫 Check weapon wheel click first
+                        if (this.weaponWheel && this.weaponWheel.visible) {
+                            const weaponId = this.weaponWheel.getWeaponAtPosition(pos.x, pos.y);
+                            if (weaponId) {
+                                this.weaponWheel.selectWeapon(weaponId);
+                                return; // Don't process other clicks
+                            }
+                        }
+
                         this.handleHUDClick(pos.x, pos.y);
                     }
                 });
@@ -2860,11 +2917,20 @@
                     e.preventDefault();
                     const touch = e.touches[0];
                     const pos = this.responsiveCanvas.getMousePos(touch.clientX, touch.clientY);
-                    
+
                     this.touches.startX = touch.clientX;
                     this.touches.startY = touch.clientY;
-                    
+
                     if (this.state === 'PLAYING') {
+                        // 🔫 Check weapon wheel tap first
+                        if (this.weaponWheel && this.weaponWheel.visible) {
+                            const weaponId = this.weaponWheel.getWeaponAtPosition(pos.x, pos.y);
+                            if (weaponId) {
+                                this.weaponWheel.selectWeapon(weaponId);
+                                return; // Don't process other touches
+                            }
+                        }
+
                         this.handleHUDClick(pos.x, pos.y);
                     }
                 }, { passive: false });
@@ -2969,9 +3035,35 @@
             showLevelComplete() {
                 this.state = 'LEVEL_COMPLETE';
                 this.audio.stopMusic();
-                
+
+                // 🔫 Hide weapon wheel and reset charges
+                if (this.weaponWheel) {
+                    this.weaponWheel.hide();
+                }
+                if (this.weaponCharges) {
+                    this.weaponCharges.reset();
+                }
+
                 const distance = Math.floor(this.levelDistance / 10);
-                const completionBonus = 100 + (this.currentLevel * 20);
+
+                // ⚖️ BALANCE: Enhanced completion bonuses for positive feedback
+                let completionBonus = 100 + (this.currentLevel * 20);
+
+                // First-time clear bonus (levels 1-10 only)
+                if (this.currentLevel <= 10 && !this.levelStars[this.currentLevel]) {
+                    completionBonus += 100;
+                }
+
+                // Perfect clear bonus (no damage taken)
+                if (this.damageTaken === 0) {
+                    completionBonus += 75;
+                }
+
+                // Boss victory bonus
+                if (this.currentLevel % 5 === 0) {
+                    completionBonus += 150;
+                }
+
                 const total = this.creditsThisRun + completionBonus;
                 
                 const stars = this.calculateStars();
@@ -3005,7 +3097,7 @@
                 const newAchs = this.achievements.getNewlyUnlocked();
                 const newAchDiv = document.getElementById('newAchievements');
                 if (newAchs.length > 0) {
-                    newAchDiv.innerHTML = '<p style="color: #ffd700; margin: 20px 0;">Ã°Å¸Å½â€° NEW ACHIEVEMENTS! Ã°Å¸Å½â€°</p>' +
+                    newAchDiv.innerHTML = '<p style="color: #ffd700; margin: 20px 0;">🎉 NEW ACHIEVEMENTS! 🎉</p>' +
                         newAchs.map(a => `<p style="font-size: clamp(20px, 5vw, 24px);">${a.icon} ${a.name}</p>`).join('');
                 } else {
                     newAchDiv.innerHTML = '';
@@ -3143,8 +3235,9 @@
                 
                 // 🛡️ Initialize atmosphere systems
                 this.initAtmosphere();
-                
-                const maxHP = 100 + (this.upgrades.health * 20);
+
+                // ⚖️ BALANCE: Increased base HP from 100 to 150 for better survivability
+                const maxHP = 150 + (this.upgrades.health * 20);
                 this.player = new Player(this.width / 2, this.height - 100, maxHP, this);
                 
                 this.showLevelIntro();
@@ -3270,8 +3363,19 @@
             
             getUpgradeCost(currentLevel) {
                 if (currentLevel >= 10) return 0;
-                // 💰 AAA: Increased base cost from 50 to 75 (50% increase for better balance)
-                return 75 * Math.pow(2, currentLevel);
+
+                // ⚖️ BALANCE: Adaptive cost curve - cheaper early upgrades for positive feedback loop
+                // Levels 0-2: 40% discount (45 credits instead of 75)
+                // Levels 3-5: 20% discount (60 credits)
+                // Levels 6+: Full price (75 credits)
+                let baseCost = 75;
+                if (currentLevel <= 2) {
+                    baseCost = 45;  // 40% cheaper
+                } else if (currentLevel <= 5) {
+                    baseCost = 60;  // 20% cheaper
+                }
+
+                return baseCost * Math.pow(2, currentLevel);
             }
             
             purchaseUpgrade(upgradeKey) {
@@ -3360,7 +3464,8 @@
                 }
                 
                 deltaTime *= this.slowMotion;
-                
+                deltaTime *= this.timeScale; // 🔫 Apply weapon slow-motion effects
+
                 if (this.state === 'PLAYING') {
                     this.update(deltaTime);
                 }
@@ -3425,7 +3530,7 @@
                     if (this.comboTimer <= 0) {
                         this.combo = 0;
                         this.superMissileReady = false;
-                        this.audio.resetComboTier(); // Ã°Å¸Å½â„¢▯ Reset tier tracking
+                        this.audio.resetComboTier(); // 🎵 Reset tier tracking
                     }
                 }
                 
@@ -3590,7 +3695,23 @@
                         this.floatingTexts.splice(i, 1);
                     }
                 }
-                
+
+                // 🔫 Update weapon systems
+                if (this.weaponCharges) {
+                    this.weaponCharges.update(deltaTime);
+                }
+                if (this.weaponWheel) {
+                    this.weaponWheel.update(deltaTime);
+                }
+
+                // 🔫 Update active weapons
+                for (let i = this.activeWeapons.length - 1; i >= 0; i--) {
+                    this.activeWeapons[i].update(deltaTime);
+                    if (this.activeWeapons[i].remove) {
+                        this.activeWeapons.splice(i, 1);
+                    }
+                }
+
                 if (!this.bossBattleActive) {
                     this.levelDistance += 3;
                 }
@@ -3624,13 +3745,82 @@
                     this.boss = new Boss(1, -150, this.currentLevel, this);
                     this.enemies.push(this.boss);
                     this.createFloatingText(this.width / 2, 200, '☠️ BOSS BATTLE! ☠️', '#ffd700');
+
+                    // 🔫 Show weapon wheel after boss appears
+                    if (this.weaponWheel) {
+                        setTimeout(() => {
+                            this.weaponWheel.show();
+                        }, 3000); // Show 3 seconds after boss spawns
+                    }
                 }, 2000);
             }
-            
+
+            // 🔫 Activate a boss weapon
+            activateWeapon(weaponId) {
+                if (!this.boss || this.boss.hp <= 0) {
+                    console.log('🔫 Cannot use weapon - no boss active');
+                    return;
+                }
+
+                if (!this.weaponCharges.useCharge(weaponId)) {
+                    console.log('🔫 Weapon not ready:', weaponId);
+                    return;
+                }
+
+                console.log('🔫 ACTIVATING WEAPON:', weaponId);
+
+                switch(weaponId) {
+                    case 'stink':
+                        // TODO: Will implement StinkMissile class
+                        console.log('💣 Stink Missile activated!');
+                        break;
+                    case 'freeze':
+                        // ❄️ FREEZING TORNADO - Freeze all enemies!
+                        this.activeWeapons.push(new FreezingTornado(
+                            this.boss.x,
+                            this.boss.y,
+                            this
+                        ));
+                        console.log('❄️ Freezing Tornado activated!');
+                        break;
+                    case 'drone':
+                        // TODO: Will implement SupportDrone class
+                        console.log('🤖 Support Drones activated!');
+                        break;
+                    case 'shock':
+                        // TODO: Will implement ElectricShock class
+                        console.log('⚡ Electric Shock activated!');
+                        break;
+                    case 'bomb':
+                        // ☢️ ATOMIC BOMB - Ultimate weapon!
+                        this.activeWeapons.push(new AtomicBomb(
+                            this.boss.x,
+                            this.boss.y,
+                            this.boss,
+                            this
+                        ));
+                        console.log('☢️ ATOMIC BOMB activated!');
+                        break;
+                }
+
+                this.audio.playUpgrade(); // Play activation sound
+            }
+
             spawnEnemies(deltaTime) {
                 this.enemySpawnTimer += deltaTime;
-                
-                let spawnRate = Math.max(1000 - (this.currentLevel * 40), 300);
+
+                // ⚖️ BALANCE: Graduated spawn rate curve for breathing room
+                // Levels 1-5: Start at 1400ms (slower, easier to learn)
+                // Levels 6-10: Start at 1200ms (moderate)
+                // Levels 11+: Normal formula
+                let baseSpawnTime = 1000;
+                if (this.currentLevel <= 5) {
+                    baseSpawnTime = 1400;  // 40% slower for tutorial levels
+                } else if (this.currentLevel <= 10) {
+                    baseSpawnTime = 1200;  // 20% slower for early game
+                }
+
+                let spawnRate = Math.max(baseSpawnTime - (this.currentLevel * 40), 300);
                 const progress = this.levelProgress;
                 if (progress > 0.7) {
                     spawnRate *= 0.6;
@@ -3655,8 +3845,21 @@
                     const lane = Math.floor(Math.random() * 3);
                     const enemy = new Enemy(lane, -50, enemyType, this.currentLevel, this);
 
-                    // 🚀 AAA: 15% chance to spawn elite variant (2x HP, 3x credits, golden glow)
-                    if (Math.random() < 0.15 && !enemy.isBoss) {
+                    // ⚖️ BALANCE: Progressive elite spawning - graduated difficulty curve
+                    // Levels 1-5: 0% (learn basics)
+                    // Levels 6-10: 5% (introduction)
+                    // Levels 11-20: 10% (regular encounters)
+                    // Levels 21+: 15% (full challenge)
+                    let eliteChance = 0;
+                    if (this.currentLevel >= 21) {
+                        eliteChance = 0.15;
+                    } else if (this.currentLevel >= 11) {
+                        eliteChance = 0.10;
+                    } else if (this.currentLevel >= 6) {
+                        eliteChance = 0.05;
+                    }
+
+                    if (Math.random() < eliteChance && !enemy.isBoss) {
                         enemy.isElite = true;
                         enemy.hp *= 2;
                         enemy.maxHp = enemy.hp;
@@ -3733,10 +3936,37 @@
             
             handleEnemyDestroyed(enemy, index) {
                 this.enemiesKilled++;
-                this.creditsThisRun += enemy.creditValue;
+
+                // ⚖️ BALANCE: Early level credit bonus for better economy pacing
+                // Levels 1-10: +50% credits to match increased costs
+                let creditMultiplier = 1.0;
+                if (this.currentLevel <= 10) {
+                    creditMultiplier = 1.5;
+                }
+
+                const earnedCredits = Math.floor(enemy.creditValue * creditMultiplier);
+                this.creditsThisRun += earnedCredits;
                 
                 this.combo++;
-                this.comboTimer = 1200; // ⚡ ULTIMATE: Reduced from 1800ms to 1200ms for MUCH harder combos!
+
+                // ⚖️ BALANCE: Adaptive combo timer - easier in early levels for interesting gameplay
+                // Levels 1-5: 2000ms (very forgiving, learn combos)
+                // Levels 6-10: 1600ms (moderate)
+                // Levels 11+: 1200ms (challenging, original difficulty)
+                let comboWindow = 1200;
+                if (this.currentLevel <= 5) {
+                    comboWindow = 2000;  // 67% longer window for tutorial levels
+                } else if (this.currentLevel <= 10) {
+                    comboWindow = 1600;  // 33% longer for early game
+                }
+
+                this.comboTimer = comboWindow;
+
+                // 🔫 Check weapon unlock milestones
+                if (this.weaponCharges) {
+                    this.weaponCharges.checkComboMilestones(this.combo);
+                }
+
                 if (this.combo > this.maxCombo) {
                     this.maxCombo = this.combo;
                 }
@@ -3758,7 +3988,7 @@
                 if (this.combo >= 2) {
                     this.comboDisplayTime = 1000;
                     this.audio.playCombo();
-                    this.audio.speakCombo(this.combo); // Ã°Å¸Å½â„¢▯ Pass combo count for tiered announcements
+                    this.audio.speakCombo(this.combo); // 🎵 Pass combo count for tiered announcements
                 }
                 
                 // 🚀 ULTIMATE: Escalating Combo System with HARDER thresholds
@@ -3772,7 +4002,7 @@
                     // 💜 Combo 12: Plasma Wave (was 10)
                     this.firePlasmaWave();
                 } else if (this.combo === 7) {
-                    // Ã°Å¸â€™â€º Combo 7: Super Missile (was 5)
+                    // 🚀 Combo 7: Super Missile (was 5)
                     this.superMissileReady = true;
                     this.fireSuperMissile();
                 }
@@ -3816,10 +4046,10 @@
                     // 🧹 CRITICAL: Clear ALL floating texts for clean victory screen
                     this.floatingTexts = [];
                     
-                    // Ã°Å¸Å½â„¢▯ Epic voice announcement
+                    // 🎵 Epic voice announcement
                     this.audio.speakBossDefeat();
                     
-                    // Ã°Å¸Å½â€  MASSIVE continuous particle effects during 5-second victory
+                    // 🎆 MASSIVE continuous particle effects during 5-second victory
                     const rainbowColors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ffd700'];
                     
                     // Primary explosion waves (250 particles instead of 150)
@@ -3862,7 +4092,7 @@
                         setTimeout(() => {
                             const x = 50 + Math.random() * 700;
                             const y = -50 - Math.random() * 150;
-                            const trophy = ['🏆', '👑', '⭐', 'Ã°Å¸Å½â€“▯', '💥â€¡'][Math.floor(Math.random() * 5)];
+                            const trophy = ['🏆', '👑', '⭐', '🎖️', '💥'][Math.floor(Math.random() * 5)];
                             this.createFloatingText(x, y, trophy, '#ffd700');
                         }, i * 80);
                     }
@@ -4132,6 +4362,11 @@
                 if (this.bossDefeated && this.bossVictoryData) {
                     this.renderBossVictoryCinematic();
                 }
+
+                // 🔫 Render weapon wheel (on top of everything)
+                if (this.weaponWheel) {
+                    this.weaponWheel.render(this.ctx);
+                }
             }
             
             renderGame() {
@@ -4163,7 +4398,10 @@
                 this.particles.forEach(particle => particle.render(this.ctx));
                 this.damageFields.forEach(field => field.render(this.ctx)); // 🌈 NEW: Render damage fields
                 this.floatingTexts.forEach(text => text.render(this.ctx));
-                
+
+                // 🔫 Render active weapon effects
+                this.activeWeapons.forEach(weapon => weapon.render(this.ctx));
+
                 this.renderHUD();
                 
                 if (this.comboDisplayTime > 0 && this.combo >= 2) {
@@ -4713,6 +4951,11 @@
                     if (data.lifetimeStats) {
                         this.lifetimeStats = data.lifetimeStats;
                     }
+                } else {
+                    // ⚖️ BALANCE: New players get starting credits for power fantasy opening
+                    this.credits = 200;
+                    // ⚖️ BALANCE: Start with 1 armor upgrade (20% damage reduction)
+                    this.upgrades.armor = 1;
                 }
             }
             
@@ -4763,7 +5006,7 @@
                 this.maxShieldCapacity = this.ship.shieldCapacity || 0;
                 this.currentShieldCapacity = this.maxShieldCapacity;
                 this.shieldRechargeDelay = 0;
-                this.shieldRechargeRate = 5; // 5% per second
+                this.shieldRechargeRate = 8; // ⚖️ BALANCE: Increased from 5% to 8% per second
                 
                 this.fireRate = (300 - (game.upgrades.attackSpeed * 30)) / this.ship.speed;
                 this.fireTimer = 0;
@@ -5004,7 +5247,7 @@
                 const configs = {
                     electric: { name: '⚡ ELECTRIC', color: '#00ffff', shots: 50, icon: '⚡' },
                     fire: { name: '🔥 FIRE', color: '#ff6600', shots: 50, icon: '🔥' },
-                    fireworks: { name: 'Ã°Å¸Å½â€  FIREWORKS', color: '#ff00ff', shots: 40, icon: 'Ã°Å¸Å½â€ ' }
+                    fireworks: { name: '🎆 FIREWORKS', color: '#ff00ff', shots: 40, icon: '🎆' }
                 };
                 
                 this.currentPowerUp = {
@@ -5046,7 +5289,7 @@
                     actualDamage = damageTaken;
                     this.currentShieldCapacity -= shieldAbsorption * 20; // Depletes shield
                     if (this.currentShieldCapacity < 0) this.currentShieldCapacity = 0;
-                    this.shieldRechargeDelay = 3000; // 3 second delay before recharge
+                    this.shieldRechargeDelay = 2000; // ⚖️ BALANCE: Reduced from 3s to 2s for better flow
 
                     this.game.createFloatingText(this.x, this.y - 30, `⚡${Math.floor(damageAbsorbed)} ABSORBED`, '#00ddff');
                 }
@@ -5321,8 +5564,8 @@
                 this.armor = 0.30; // ✨ FIXED: 30% damage reduction
                 this.speed = 0;
                 this.contactDamage = 50;
-                // 💰 AAA: Reduced boss credits by 30% (from 200+50*level to 140+35*level) for better balance
-                this.creditValue = 140 + (level * 35);
+                // ⚖️ BALANCE: Restored boss credits to original value (risk/reward balance)
+                this.creditValue = 200 + (level * 50);
                 this.width = 120 * sizeMultiplier;
                 this.height = 120 * sizeMultiplier;
                 this.size = 150 * sizeMultiplier;
@@ -5412,7 +5655,7 @@
             }
             
             executeAttackPattern() {
-                this.telegraphTimer = 1500; // ✨ INCREASED: 500ms Ã¢â€ â€™ 1500ms warning time
+                this.telegraphTimer = 1500; // ✨ INCREASED: 500ms → 1500ms warning time
                 
                 switch(this.attackPattern) {
                     case 'SINGLE':
@@ -5840,7 +6083,7 @@
                 this.x = game.getLaneX(lane);
                 this.size = 30;
                 this.rotation = 0;
-                this.icons = { electric: '⚡', fire: '🔥', fireworks: 'Ã°Å¸Å½â€ ', shield: '🛡️' }; // 🛡️ NEW
+                this.icons = { electric: '⚡', fire: '🔥', fireworks: '🎆', shield: '🛡️' }; // 🛡️ NEW
                 this.colors = { electric: '#00ffff', fire: '#ff6600', fireworks: '#ff00ff', shield: '#00ccff', freeze: '#87ceeb', pierce: '#ffff00', homing: '#ff1493', timeSlow: '#9370db', rage: '#ff0000', multishot: '#ffd700' }; // 🚀 AAA: Extended with 6 new types
             }
             
@@ -5932,7 +6175,878 @@
                 ctx.restore();
             }
         }
-        
+
+
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // 🔫 MODULE: BOSS WEAPON SYSTEM
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // PURPOSE: Special weapons unlocked via combos, used in boss battles
+        // FEATURES: 5 weapons + radial wheel UI + charge system
+        // ═══════════════════════════════════════════════════════════════════════════════
+
+        // ❄️ FREEZING TORNADO - Freeze all enemies and deal damage over time
+        class FreezingTornado {
+            constructor(targetX, targetY, game) {
+                this.game = game;
+                this.x = targetX;
+                this.y = targetY;
+                this.phase = 'SPAWNING'; // SPAWNING → ACTIVE → FADING → DONE
+                this.timer = 0;
+                this.remove = false;
+                this.rotation = 0;
+                this.radius = 0;
+                this.maxRadius = 150;
+                this.height = 0;
+                this.maxHeight = 400;
+                this.particles = [];
+                this.freezeDuration = 4000; // 4 seconds
+                this.damageInterval = 500; // Damage every 0.5 seconds
+                this.damageTimer = 0;
+                this.frozenEnemies = new Set();
+                this.originalEnemySpeeds = new Map();
+                this.totalDuration = 6000; // Total effect duration
+            }
+
+            update(deltaTime) {
+                this.timer += deltaTime;
+                this.rotation += deltaTime * 0.005; // Spinning effect
+                this.damageTimer += deltaTime;
+
+                switch(this.phase) {
+                    case 'SPAWNING':
+                        // Grow tornado
+                        this.radius = Math.min(this.maxRadius, this.radius + (deltaTime * 0.3));
+                        this.height = Math.min(this.maxHeight, this.height + (deltaTime * 0.5));
+
+                        // Create ice particles
+                        if (Math.random() < 0.3) {
+                            this.createIceParticle();
+                        }
+
+                        if (this.timer >= 1000) {
+                            this.phase = 'ACTIVE';
+                            this.timer = 0;
+                            this.freezeEnemies();
+                            // Apply slow motion
+                            if (this.game.timeScale !== undefined) {
+                                this.game.timeScale = 0.3;
+                            }
+                        }
+                        break;
+
+                    case 'ACTIVE':
+                        // Maintain tornado, deal periodic damage
+                        if (this.damageTimer >= this.damageInterval) {
+                            this.dealDamage();
+                            this.damageTimer = 0;
+                        }
+
+                        // Create ice particles
+                        if (Math.random() < 0.5) {
+                            this.createIceParticle();
+                        }
+
+                        if (this.timer >= this.freezeDuration) {
+                            this.phase = 'FADING';
+                            this.timer = 0;
+                            this.unfreezeEnemies();
+                            // Restore normal speed
+                            if (this.game.timeScale !== undefined) {
+                                this.game.timeScale = 1.0;
+                            }
+                        }
+                        break;
+
+                    case 'FADING':
+                        // Shrink tornado
+                        this.radius *= 0.95;
+                        this.height *= 0.95;
+
+                        if (this.timer >= 1000 || this.radius < 10) {
+                            this.phase = 'DONE';
+                            this.remove = true;
+                        }
+                        break;
+                }
+
+                // Update ice particles
+                this.particles.forEach(p => {
+                    p.x += Math.cos(p.angle) * p.speed * (deltaTime / 16);
+                    p.y += Math.sin(p.angle) * p.speed * (deltaTime / 16);
+                    p.y -= p.rise * (deltaTime / 16);
+                    p.life -= deltaTime / 1000;
+                    p.angle += p.spin;
+                });
+                this.particles = this.particles.filter(p => p.life > 0);
+            }
+
+            createIceParticle() {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * this.radius;
+                this.particles.push({
+                    x: this.x + Math.cos(angle) * distance,
+                    y: this.y + Math.sin(angle) * distance,
+                    angle: angle,
+                    speed: 1 + Math.random() * 2,
+                    rise: 2 + Math.random() * 3,
+                    spin: (Math.random() - 0.5) * 0.1,
+                    life: 2 + Math.random() * 2,
+                    size: 3 + Math.random() * 5,
+                    opacity: 0.5 + Math.random() * 0.5
+                });
+            }
+
+            freezeEnemies() {
+                // Freeze all enemies on screen
+                this.game.enemies.forEach(enemy => {
+                    if (!enemy.isBoss) {
+                        this.frozenEnemies.add(enemy);
+                        // Store original speed and set to 0
+                        if (!this.originalEnemySpeeds.has(enemy)) {
+                            this.originalEnemySpeeds.set(enemy, enemy.speed);
+                            enemy.speed = 0;
+                            // Add frozen visual flag
+                            enemy.frozen = true;
+                        }
+                    }
+                });
+
+                // Show notification
+                this.game.createFloatingText(
+                    this.x,
+                    this.y - 200,
+                    '❄️ FROZEN! ❄️',
+                    '#00ffff',
+                    48
+                );
+            }
+
+            unfreezeEnemies() {
+                // Restore enemy speeds
+                this.frozenEnemies.forEach(enemy => {
+                    if (this.originalEnemySpeeds.has(enemy)) {
+                        enemy.speed = this.originalEnemySpeeds.get(enemy);
+                        enemy.frozen = false;
+                    }
+                });
+                this.frozenEnemies.clear();
+                this.originalEnemySpeeds.clear();
+            }
+
+            dealDamage() {
+                // Deal damage to frozen enemies
+                const damage = 50;
+                this.frozenEnemies.forEach(enemy => {
+                    if (enemy.hp > 0) {
+                        enemy.hp -= damage;
+                        // Create small damage indicator
+                        this.game.createFloatingText(
+                            enemy.x,
+                            enemy.y,
+                            `-${damage}`,
+                            '#00ffff',
+                            20
+                        );
+                    }
+                });
+            }
+
+            render(ctx) {
+                ctx.save();
+
+                // Blue screen tint
+                if (this.phase === 'ACTIVE' || this.phase === 'SPAWNING') {
+                    const tintOpacity = this.phase === 'SPAWNING'
+                        ? (this.timer / 1000) * 0.15
+                        : 0.15;
+                    ctx.fillStyle = `rgba(0, 100, 255, ${tintOpacity})`;
+                    ctx.fillRect(0, 0, this.game.width, this.game.height);
+                }
+
+                // Tornado spiral effect
+                for (let i = 0; i < 10; i++) {
+                    const layerHeight = (this.height / 10) * i;
+                    const layerRadius = this.radius * (1 - i / 10);
+                    const layerRotation = this.rotation + (i * 0.3);
+                    const layerY = this.y - layerHeight;
+
+                    // Draw spiral segments
+                    for (let j = 0; j < 8; j++) {
+                        const angle = layerRotation + (Math.PI * 2 / 8) * j;
+                        const x1 = this.x + Math.cos(angle) * layerRadius;
+                        const y1 = layerY;
+                        const x2 = this.x + Math.cos(angle + 0.5) * layerRadius * 0.8;
+                        const y2 = layerY;
+
+                        ctx.strokeStyle = `rgba(100, 200, 255, ${0.3 + i / 20})`;
+                        ctx.lineWidth = 8 - (i * 0.5);
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.stroke();
+                    }
+                }
+
+                // Tornado core
+                const coreGradient = ctx.createLinearGradient(
+                    this.x, this.y,
+                    this.x, this.y - this.height
+                );
+                coreGradient.addColorStop(0, 'rgba(200, 230, 255, 0.3)');
+                coreGradient.addColorStop(0.5, 'rgba(150, 200, 255, 0.5)');
+                coreGradient.addColorStop(1, 'rgba(100, 150, 255, 0.2)');
+
+                ctx.fillStyle = coreGradient;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - this.radius * 0.3, this.y);
+                ctx.lineTo(this.x - this.radius * 0.1, this.y - this.height);
+                ctx.lineTo(this.x + this.radius * 0.1, this.y - this.height);
+                ctx.lineTo(this.x + this.radius * 0.3, this.y);
+                ctx.closePath();
+                ctx.fill();
+
+                // Ice particles
+                this.particles.forEach(p => {
+                    ctx.fillStyle = `rgba(200, 240, 255, ${p.opacity * p.life / 2})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Snowflake sparkle
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${p.opacity * p.life / 2})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x - p.size, p.y);
+                    ctx.lineTo(p.x + p.size, p.y);
+                    ctx.moveTo(p.x, p.y - p.size);
+                    ctx.lineTo(p.x, p.y + p.size);
+                    ctx.stroke();
+                });
+
+                // Glow effect at base
+                if (this.phase !== 'FADING') {
+                    const baseGradient = ctx.createRadialGradient(
+                        this.x, this.y, 0,
+                        this.x, this.y, this.radius
+                    );
+                    baseGradient.addColorStop(0, 'rgba(200, 230, 255, 0.5)');
+                    baseGradient.addColorStop(0.6, 'rgba(100, 180, 255, 0.3)');
+                    baseGradient.addColorStop(1, 'rgba(50, 150, 255, 0)');
+
+                    ctx.fillStyle = baseGradient;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            // Cleanup when removed
+            cleanup() {
+                this.unfreezeEnemies();
+                if (this.game.timeScale !== undefined) {
+                    this.game.timeScale = 1.0;
+                }
+            }
+        }
+
+        // ☢️ ATOMIC BOMB - Ultimate weapon dealing massive damage
+        class AtomicBomb {
+            constructor(targetX, targetY, boss, game) {
+                this.game = game;
+                this.boss = boss;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.phase = 'WARNING'; // WARNING → EXPLOSION → MUSHROOM → DONE
+                this.timer = 0;
+                this.remove = false;
+                this.explosionRadius = 0;
+                this.maxExplosionRadius = 400;
+                this.mushroomHeight = 0;
+                this.maxMushroomHeight = 300;
+                this.particles = [];
+                this.damageDealt = false;
+                this.shockwaveRadius = 0;
+                this.flashIntensity = 0;
+            }
+
+            update(deltaTime) {
+                this.timer += deltaTime;
+
+                switch(this.phase) {
+                    case 'WARNING':
+                        if (this.timer >= 1000) {
+                            this.phase = 'EXPLOSION';
+                            this.timer = 0;
+                            this.explode();
+                        }
+                        break;
+
+                    case 'EXPLOSION':
+                        // Expand explosion radius
+                        this.explosionRadius = Math.min(
+                            this.maxExplosionRadius,
+                            this.explosionRadius + (deltaTime * 0.8)
+                        );
+                        this.shockwaveRadius = this.explosionRadius * 1.2;
+
+                        // Flash effect
+                        this.flashIntensity = Math.max(0, 1 - (this.timer / 500));
+
+                        // Screen shake
+                        if (this.timer < 500) {
+                            const intensity = 50 * (1 - this.timer / 500);
+                            this.game.screenShake.x = (Math.random() - 0.5) * intensity;
+                            this.game.screenShake.y = (Math.random() - 0.5) * intensity;
+                        }
+
+                        // Update particles
+                        this.particles.forEach(p => {
+                            p.x += p.vx * (deltaTime / 16);
+                            p.y += p.vy * (deltaTime / 16);
+                            p.life -= deltaTime / 1000;
+                            p.radius *= 0.98;
+                        });
+                        this.particles = this.particles.filter(p => p.life > 0);
+
+                        if (this.timer >= 800) {
+                            this.phase = 'MUSHROOM';
+                            this.timer = 0;
+                        }
+                        break;
+
+                    case 'MUSHROOM':
+                        // Grow mushroom cloud
+                        this.mushroomHeight = Math.min(
+                            this.maxMushroomHeight,
+                            this.mushroomHeight + (deltaTime * 0.3)
+                        );
+
+                        // Fade explosion
+                        this.explosionRadius *= 0.95;
+
+                        if (this.timer >= 2000) {
+                            this.phase = 'DONE';
+                            this.remove = true;
+                            // Restore normal game speed
+                            if (this.game.timeScale) {
+                                this.game.timeScale = 1.0;
+                            }
+                        }
+                        break;
+                }
+            }
+
+            explode() {
+                // Deal damage to boss (33% of max HP)
+                if (this.boss && this.boss.hp > 0 && !this.damageDealt) {
+                    const damage = Math.floor(this.boss.maxHp * 0.33);
+                    this.boss.hp = Math.max(0, this.boss.hp - damage);
+                    this.damageDealt = true;
+
+                    // Show damage text
+                    this.game.createFloatingText(
+                        this.targetX,
+                        this.targetY - 100,
+                        `☢️ -${damage} ☢️`,
+                        '#ff00ff',
+                        60
+                    );
+                }
+
+                // Create explosion particles
+                for (let i = 0; i < 100; i++) {
+                    const angle = (Math.PI * 2 / 100) * i;
+                    const speed = 3 + Math.random() * 5;
+                    this.particles.push({
+                        x: this.targetX,
+                        y: this.targetY,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        radius: 10 + Math.random() * 20,
+                        life: 1 + Math.random() * 2,
+                        color: Math.random() > 0.5 ? '#ff6600' : '#ffaa00'
+                    });
+                }
+
+                // Slow motion effect
+                if (this.game.timeScale !== undefined) {
+                    this.game.timeScale = 0.15;
+                }
+
+                // Play sound effect
+                this.game.audio.playExplosion();
+            }
+
+            render(ctx) {
+                ctx.save();
+
+                // WARNING phase - pulsing target indicator
+                if (this.phase === 'WARNING') {
+                    const pulse = Math.sin(this.timer / 100) * 0.3 + 0.7;
+                    const radius = 60 * pulse;
+
+                    // Warning circle
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([10, 10]);
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Crosshair
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.targetX - 40, this.targetY);
+                    ctx.lineTo(this.targetX + 40, this.targetY);
+                    ctx.moveTo(this.targetX, this.targetY - 40);
+                    ctx.lineTo(this.targetX, this.targetY + 40);
+                    ctx.stroke();
+
+                    // Warning text
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = 'bold 24px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('☢️ INCOMING ☢️', this.targetX, this.targetY - 80);
+                }
+
+                // EXPLOSION phase
+                if (this.phase === 'EXPLOSION') {
+                    // Flash effect
+                    if (this.flashIntensity > 0) {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${this.flashIntensity * 0.6})`;
+                        ctx.fillRect(0, 0, this.game.width, this.game.height);
+                    }
+
+                    // Main explosion
+                    const gradient = ctx.createRadialGradient(
+                        this.targetX, this.targetY, 0,
+                        this.targetX, this.targetY, this.explosionRadius
+                    );
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                    gradient.addColorStop(0.3, 'rgba(255, 200, 0, 0.7)');
+                    gradient.addColorStop(0.6, 'rgba(255, 100, 0, 0.4)');
+                    gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, this.explosionRadius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Shockwave ring
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${1 - (this.timer / 800)})`;
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.arc(this.targetX, this.targetY, this.shockwaveRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Particles
+                    this.particles.forEach(p => {
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = p.life / 2;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    ctx.globalAlpha = 1;
+                }
+
+                // MUSHROOM phase
+                if (this.phase === 'MUSHROOM') {
+                    // Fading explosion base
+                    if (this.explosionRadius > 10) {
+                        const baseGradient = ctx.createRadialGradient(
+                            this.targetX, this.targetY, 0,
+                            this.targetX, this.targetY, this.explosionRadius
+                        );
+                        baseGradient.addColorStop(0, 'rgba(255, 100, 0, 0.3)');
+                        baseGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+                        ctx.fillStyle = baseGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.targetX, this.targetY, this.explosionRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Mushroom cloud stem
+                    const stemGradient = ctx.createLinearGradient(
+                        this.targetX, this.targetY,
+                        this.targetX, this.targetY - this.mushroomHeight
+                    );
+                    stemGradient.addColorStop(0, 'rgba(100, 100, 100, 0.8)');
+                    stemGradient.addColorStop(1, 'rgba(150, 150, 150, 0.6)');
+
+                    ctx.fillStyle = stemGradient;
+                    ctx.fillRect(
+                        this.targetX - 30,
+                        this.targetY - this.mushroomHeight,
+                        60,
+                        this.mushroomHeight
+                    );
+
+                    // Mushroom cloud cap
+                    if (this.mushroomHeight > 50) {
+                        const capY = this.targetY - this.mushroomHeight;
+                        const capRadius = 80;
+
+                        const capGradient = ctx.createRadialGradient(
+                            this.targetX, capY, 0,
+                            this.targetX, capY, capRadius
+                        );
+                        capGradient.addColorStop(0, 'rgba(200, 200, 200, 0.9)');
+                        capGradient.addColorStop(0.7, 'rgba(100, 100, 100, 0.7)');
+                        capGradient.addColorStop(1, 'rgba(80, 80, 80, 0.3)');
+
+                        ctx.fillStyle = capGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.targetX, capY, capRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // 🔋 Weapon Charge System - Manages unlocking and charging weapons
+        class WeaponChargeSystem {
+            constructor(game) {
+                this.game = game;
+                this.charges = {
+                    stink: 0,
+                    freeze: 0,
+                    drone: 0,
+                    shock: 0,
+                    bomb: 0
+                };
+                this.maxCharges = {
+                    stink: 3,
+                    freeze: 2,
+                    drone: 2,
+                    shock: 2,
+                    bomb: 1
+                };
+                this.cooldowns = {
+                    stink: 0,
+                    freeze: 0,
+                    drone: 0,
+                    shock: 0,
+                    bomb: 0
+                };
+                this.cooldownDurations = {
+                    stink: 30000,
+                    freeze: 45000,
+                    drone: 40000,
+                    shock: 35000,
+                    bomb: Infinity // One use per boss
+                };
+                this.lastComboCheck = 0;
+            }
+
+            update(deltaTime) {
+                // Update cooldowns
+                Object.keys(this.cooldowns).forEach(weapon => {
+                    if (this.cooldowns[weapon] > 0) {
+                        this.cooldowns[weapon] -= deltaTime;
+                        if (this.cooldowns[weapon] < 0) this.cooldowns[weapon] = 0;
+                    }
+                });
+            }
+
+            checkComboMilestones(combo) {
+                // Prevent duplicate charges for same combo
+                if (combo === this.lastComboCheck) return;
+                this.lastComboCheck = combo;
+
+                // Award charges based on combo milestones
+                if (combo >= 5 && this.charges.stink < this.maxCharges.stink) {
+                    this.addCharge('stink');
+                }
+                if (combo >= 8 && this.charges.freeze < this.maxCharges.freeze) {
+                    this.addCharge('freeze');
+                }
+                if (combo >= 10 && this.charges.drone < this.maxCharges.drone) {
+                    this.addCharge('drone');
+                }
+                if (combo >= 12 && this.charges.shock < this.maxCharges.shock) {
+                    this.addCharge('shock');
+                }
+                if (combo >= 20 && this.charges.bomb < this.maxCharges.bomb) {
+                    this.addCharge('bomb');
+                }
+            }
+
+            addCharge(weaponId) {
+                this.charges[weaponId]++;
+                const names = {
+                    stink: 'STINK MISSILE',
+                    freeze: 'FREEZING TORNADO',
+                    drone: 'SHOOTING DRONES',
+                    shock: 'ELECTRIC SHOCK',
+                    bomb: 'ATOMIC BOMB'
+                };
+                this.game.createFloatingText(
+                    this.game.width / 2,
+                    100,
+                    `${names[weaponId]} CHARGED! ⚡`,
+                    '#ffd700'
+                );
+                this.game.audio.playUpgrade(); // Use existing sound
+            }
+
+            canUseWeapon(weaponId) {
+                return this.charges[weaponId] > 0 && this.cooldowns[weaponId] <= 0;
+            }
+
+            useCharge(weaponId) {
+                if (this.canUseWeapon(weaponId)) {
+                    this.charges[weaponId]--;
+                    this.cooldowns[weaponId] = this.cooldownDurations[weaponId];
+                    return true;
+                }
+                return false;
+            }
+
+            reset() {
+                // Reset all charges (called when starting new level)
+                Object.keys(this.charges).forEach(weapon => {
+                    this.charges[weapon] = 0;
+                });
+                this.lastComboCheck = 0;
+            }
+
+            resetCooldowns() {
+                // Reset cooldowns when boss defeated
+                Object.keys(this.cooldowns).forEach(weapon => {
+                    if (weapon !== 'bomb') { // Bomb stays on cooldown
+                        this.cooldowns[weapon] = 0;
+                    }
+                });
+            }
+        }
+
+
+        // 🎨 Radial Weapon Wheel UI
+        class RadialWeaponWheel {
+            constructor(game) {
+                this.game = game;
+                this.visible = false;
+                this.weapons = [
+                    { angle: 0, id: 'freeze', icon: '❄️', name: 'FREEZE' },
+                    { angle: Math.PI / 2, id: 'drone', icon: '🤖', name: 'DRONES' },
+                    { angle: Math.PI, id: 'stink', icon: '💣', name: 'STINK' },
+                    { angle: Math.PI * 1.5, id: 'shock', icon: '⚡', name: 'SHOCK' },
+                ];
+                this.centerWeapon = { id: 'bomb', icon: '☢️', name: 'ATOMIC BOMB' };
+                this.selectedWeapon = null;
+                this.wheelRadius = 70; // 🔧 FIXED: Smaller radius for compact UI
+                this.centerX = 0;
+                this.centerY = 0;
+                this.pulse = 0;
+            }
+
+            show() {
+                this.visible = true;
+                // 🔧 FIXED: Position on right side of screen, not center
+                this.centerX = this.game.width - 120;
+                this.centerY = this.game.height / 2;
+            }
+
+            hide() {
+                this.visible = false;
+                this.selectedWeapon = null;
+            }
+
+            update(deltaTime) {
+                if (!this.visible) return;
+                this.pulse += deltaTime / 1000;
+            }
+
+            selectWeapon(id) {
+                const weapon = [...this.weapons, this.centerWeapon].find(w => w.id === id);
+                if (weapon && this.game.weaponCharges.canUseWeapon(id)) {
+                    this.game.activateWeapon(id);
+                    // 🔧 FIXED: Don't hide wheel - keep it visible during boss battle
+                }
+            }
+
+            render(ctx) {
+                if (!this.visible) return;
+
+                ctx.save();
+
+                // 🔧 FIXED: No full-screen overlay - keep game visible like mobile games
+
+                // Background circle - semi-transparent
+                ctx.fillStyle = 'rgba(20, 20, 20, 0.7)'; // 🔧 FIXED: More transparent
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)'; // 🔧 FIXED: Transparent gold border
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.centerX, this.centerY, this.wheelRadius + 40, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // 🔧 FIXED: Compact title above wheel
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+                ctx.font = 'bold 14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('WEAPONS', this.centerX, this.centerY - this.wheelRadius - 50);
+
+                // Render outer weapons
+                this.weapons.forEach((weapon, index) => {
+                    this.renderWeapon(ctx, weapon, index + 1);
+                });
+
+                // Render center weapon (Atomic Bomb)
+                this.renderCenterWeapon(ctx);
+
+                ctx.restore();
+            }
+
+            renderWeapon(ctx, weapon, keyNumber) {
+                const x = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
+                const y = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
+
+                const charges = this.game.weaponCharges.charges[weapon.id];
+                const cooldown = this.game.weaponCharges.cooldowns[weapon.id];
+                const canUse = this.game.weaponCharges.canUseWeapon(weapon.id);
+
+                // Weapon circle background - semi-transparent
+                ctx.fillStyle = canUse ? 'rgba(50, 50, 50, 0.8)' : 'rgba(20, 20, 20, 0.7)';
+                ctx.strokeStyle = canUse ? 'rgba(0, 255, 0, 0.9)' : 'rgba(85, 85, 85, 0.7)';
+                ctx.lineWidth = canUse ? 3 : 2;
+
+                if (canUse) {
+                    const pulseSize = Math.sin(this.pulse * 3) * 2;
+                    ctx.shadowBlur = 15 + pulseSize;
+                    ctx.shadowColor = 'rgba(0, 255, 0, 0.6)';
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, 35, 0, Math.PI * 2); // 🔧 FIXED: Smaller circles (35px)
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Cooldown overlay
+                if (cooldown > 0) {
+                    const totalCooldown = this.game.weaponCharges.cooldownDurations[weapon.id];
+                    const percentage = cooldown / totalCooldown;
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.arc(x, y, 35, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percentage));
+                    ctx.lineTo(x, y);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Cooldown text
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(Math.ceil(cooldown / 1000) + 's', x, y);
+                } else {
+                    // Weapon icon
+                    ctx.font = 'bold 28px Arial'; // 🔧 FIXED: Smaller icon
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = canUse ? '#fff' : '#555';
+                    ctx.fillText(weapon.icon, x, y);
+                }
+
+                // Charge count
+                if (charges > 0) {
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+                    ctx.font = 'bold 12px Courier New';
+                    ctx.fillText(`×${charges}`, x + 28, y - 28);
+                }
+
+                // Key number - smaller for compact UI
+                ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
+                ctx.font = 'bold 12px Courier New';
+                ctx.fillText(keyNumber.toString(), x, y + 45);
+
+                // Weapon name - removed to save space
+            }
+
+            renderCenterWeapon(ctx) {
+                const x = this.centerX;
+                const y = this.centerY;
+                const weapon = this.centerWeapon;
+
+                const charges = this.game.weaponCharges.charges[weapon.id];
+                const canUse = this.game.weaponCharges.canUseWeapon(weapon.id);
+
+                // Larger center weapon - semi-transparent
+                ctx.fillStyle = canUse ? 'rgba(139, 0, 0, 0.8)' : 'rgba(20, 20, 20, 0.7)';
+                ctx.strokeStyle = canUse ? 'rgba(255, 0, 0, 0.9)' : 'rgba(85, 85, 85, 0.7)';
+                ctx.lineWidth = canUse ? 3 : 2;
+
+                if (canUse) {
+                    const pulseSize = Math.sin(this.pulse * 5) * 3;
+                    ctx.shadowBlur = 20 + pulseSize;
+                    ctx.shadowColor = 'rgba(255, 0, 0, 0.6)';
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, 45, 0, Math.PI * 2); // 🔧 FIXED: Smaller center (45px)
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Icon
+                ctx.font = 'bold 36px Arial'; // 🔧 FIXED: Smaller icon
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = canUse ? '#fff' : '#555';
+                ctx.fillText(weapon.icon, x, y);
+
+                // Charge indicator or requirement
+                if (charges > 0) {
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+                    ctx.font = 'bold 11px Courier New';
+                    ctx.fillText('READY!', x, y + 55);
+                } else {
+                    ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
+                    ctx.font = 'bold 10px Courier New';
+                    ctx.fillText('20 COMBO', x, y + 55);
+                }
+
+                // Key number
+                ctx.fillStyle = 'rgba(136, 136, 136, 0.8)';
+                ctx.font = 'bold 12px Courier New';
+                ctx.fillText('5', x, y - 55);
+            }
+
+            // Check if mouse/touch is over a weapon
+            getWeaponAtPosition(x, y) {
+                // Check outer weapons
+                for (let weapon of this.weapons) {
+                    const wx = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
+                    const wy = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
+                    const dist = Math.hypot(x - wx, y - wy);
+                    if (dist < 35) return weapon.id; // 🔧 FIXED: Use new radius
+                }
+
+                // Check center weapon
+                const distCenter = Math.hypot(x - this.centerX, y - this.centerY);
+                if (distCenter < 45) return this.centerWeapon.id; // 🔧 FIXED: Use new radius
+
+                return null;
+            }
+        }
+
+
         const game = new Game();
     </script>
 </body>
