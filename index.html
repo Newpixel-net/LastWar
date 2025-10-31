@@ -4881,12 +4881,18 @@
                 this.ctx.font = 'bold 14px Courier New';
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText('LEVEL ' + this.currentLevel, barX + barWidth / 2, barY + 20);
-                
+
                 if (this.levelProgress >= 0.95) {
                     this.ctx.fillStyle = '#ffd700';
                     this.ctx.fillText('🎯', barX + barWidth + 20, barY + 20);
                 }
-                
+
+                // Version display in game HUD (top-left below level)
+                this.ctx.textAlign = 'left';
+                this.ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+                this.ctx.font = 'bold 12px Courier New';
+                this.ctx.fillText('v0.1.7', padding, padding + 90);
+
                 this.ctx.textAlign = 'right';
                 this.ctx.fillStyle = '#ffd700';
                 this.ctx.font = 'bold 24px Courier New';
