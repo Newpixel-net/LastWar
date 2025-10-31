@@ -716,7 +716,7 @@
         <div id="mainMenu" class="screen active">
             <h1>LASTWAR<br>CYBER SURVIVAL</h1>
             <p style="color: #ff006e; font-size: clamp(16px, 4vw, 20px); margin-bottom: 10px;">🚀 MEGA ULTRA EDITION 🚀</p>
-            <p style="color: #00ffff; font-size: clamp(12px, 3vw, 14px); margin-bottom: 20px; opacity: 0.8;">Version 0.1.2</p>
+            <p style="color: #00ffff; font-size: clamp(12px, 3vw, 14px); margin-bottom: 20px; opacity: 0.8;">Version 0.1.3</p>
             <p style="color: #ff00ff; font-size: clamp(14px, 3.5vw, 18px); margin-bottom: 10px;">⚡ PHASE 1: ATMOSPHERE 🛡️ + MUSIC 🎵 ⚡</p>
             <button class="button" onclick="game.showLevelSelect()">▶ START</button>
             <button class="button" onclick="game.toggleSound()">🔊 SOUND: <span id="soundStatus">ON</span></button>
@@ -2995,6 +2995,8 @@
             showMainMenu() {
                 this.state = 'MENU';
                 this.audio.stopMusic();
+                // Clear active weapons to prevent memory leaks
+                this.activeWeapons.length = 0;
                 this.showScreen('mainMenu');
             }
             
@@ -3016,6 +3018,8 @@
             showGameOver() {
                 this.state = 'GAME_OVER';
                 this.audio.stopMusic();
+                // Clear active weapons to prevent memory leaks
+                this.activeWeapons.length = 0;
 
                 const stars = this.calculateStars();
 
@@ -3041,6 +3045,8 @@
             showLevelComplete() {
                 this.state = 'LEVEL_COMPLETE';
                 this.audio.stopMusic();
+                // Clear active weapons to prevent memory leaks
+                this.activeWeapons.length = 0;
 
                 // 🔫 Hide weapon wheel and reset charges
                 if (this.weaponWheel) {
@@ -3455,28 +3461,39 @@
             
             gameLoop(timestamp = 0) {
                 requestAnimationFrame((t) => this.gameLoop(t));
-                
-                let deltaTime = timestamp - this.lastTime;
-                this.lastTime = timestamp;
-                if (deltaTime > 100) deltaTime = 16;
-                
-                if (this.hitStop > 0) {
-                    this.hitStop -= deltaTime;
-                    if (this.hitStop <= 0) {
-                        this.hitStop = 0;
-                    } else {
-                        deltaTime = 0;
-                    }
-                }
-                
-                deltaTime *= this.slowMotion;
-                deltaTime *= this.timeScale; // 🔫 Apply weapon slow-motion effects
 
-                if (this.state === 'PLAYING') {
-                    this.update(deltaTime);
+                try {
+                    let deltaTime = timestamp - this.lastTime;
+                    this.lastTime = timestamp;
+                    if (deltaTime > 100) deltaTime = 16;
+
+                    if (this.hitStop > 0) {
+                        this.hitStop -= deltaTime;
+                        if (this.hitStop <= 0) {
+                            this.hitStop = 0;
+                        } else {
+                            deltaTime = 0;
+                        }
+                    }
+
+                    deltaTime *= this.slowMotion;
+                    deltaTime *= this.timeScale; // 🔫 Apply weapon slow-motion effects
+
+                    if (this.state === 'PLAYING') {
+                        this.update(deltaTime);
+                    }
+
+                    this.render();
+                } catch (error) {
+                    // 🐛 v0.1.3: Error handling to prevent game crashes
+                    console.error('Game loop error:', error);
+                    // Attempt to recover by clearing potentially problematic state
+                    if (this.activeWeapons && this.activeWeapons.length > 0) {
+                        console.warn('Clearing active weapons due to error');
+                        this.activeWeapons.length = 0;
+                    }
+                    // Continue game loop despite error
                 }
-                
-                this.render();
             }
             
             update(deltaTime) {
@@ -3553,8 +3570,10 @@
                     }
                 }
                 
-                // Update weather particles
-                this.weatherParticles.forEach(p => p.update(deltaTime, this.height, this.width));
+                // Update weather particles (skip during intro, boss warnings, and victory to save CPU)
+                if (!this.showingIntro && !this.bossWarning) {
+                    this.weatherParticles.forEach(p => p.update(deltaTime, this.height, this.width));
+                }
                 
                 // Update fog
                 if (this.fogLayer) {
@@ -3777,7 +3796,8 @@
 
                 switch(weaponId) {
                     case 'stink':
-                        // TODO: Will implement StinkMissile class
+                        // 💣 STINK MISSILE - Launch homing missiles!
+                        this.activeWeapons.push(new StinkMissile(this));
                         console.log('💣 Stink Missile activated!');
                         break;
                     case 'freeze':
@@ -3790,11 +3810,13 @@
                         console.log('❄️ Freezing Tornado activated!');
                         break;
                     case 'drone':
-                        // TODO: Will implement SupportDrone class
+                        // 🤖 SUPPORT DRONES - Orbital attack drones!
+                        this.activeWeapons.push(new SupportDrone(this));
                         console.log('🤖 Support Drones activated!');
                         break;
                     case 'shock':
-                        // TODO: Will implement ElectricShock class
+                        // ⚡ ELECTRIC SHOCK - Chain lightning attack!
+                        this.activeWeapons.push(new ElectricShock(this));
                         console.log('⚡ Electric Shock activated!');
                         break;
                     case 'bomb':
@@ -3998,18 +4020,25 @@
                     this.audio.speakCombo(this.combo); // 🎵 Pass combo count for tiered announcements
                 }
                 
-                // 🚀 ULTIMATE: Escalating Combo System with HARDER thresholds
-                if (this.combo >= 25 && this.combo % 5 === 0) {
-                    // 🌈 Combo 25+: Ultimate Annihilation (was 20)
+                // 🚀 ULTIMATE: Escalating Combo System with level-scaled thresholds
+                // 🎮 v0.1.3: Early levels (1-5) have easier combo requirements
+                const isEarlyLevel = this.currentLevel <= 5;
+                const ultimateThreshold = isEarlyLevel ? 18 : 25;
+                const orbitalThreshold = isEarlyLevel ? 12 : 18;
+                const plasmaThreshold = isEarlyLevel ? 8 : 12;
+                const superThreshold = isEarlyLevel ? 5 : 7;
+
+                if (this.combo >= ultimateThreshold && this.combo % 5 === 0) {
+                    // 🌈 Ultimate Annihilation (Combo 18+ for levels 1-5, 25+ for levels 6+)
                     this.fireUltimateAnnihilation();
-                } else if (this.combo === 18) {
-                    // ⚡ Combo 18: Orbital Strike (was 15)
+                } else if (this.combo === orbitalThreshold) {
+                    // ⚡ Orbital Strike (Combo 12 for levels 1-5, 18 for levels 6+)
                     this.fireOrbitalStrike();
-                } else if (this.combo === 12) {
-                    // 💜 Combo 12: Plasma Wave (was 10)
+                } else if (this.combo === plasmaThreshold) {
+                    // 💜 Plasma Wave (Combo 8 for levels 1-5, 12 for levels 6+)
                     this.firePlasmaWave();
-                } else if (this.combo === 7) {
-                    // 🚀 Combo 7: Super Missile (was 5)
+                } else if (this.combo === superThreshold) {
+                    // 🚀 Super Missile (Combo 5 for levels 1-5, 7 for levels 6+)
                     this.superMissileReady = true;
                     this.fireSuperMissile();
                 }
@@ -4059,8 +4088,8 @@
                     // 🎆 MASSIVE continuous particle effects during 5-second victory
                     const rainbowColors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ffd700'];
                     
-                    // Primary explosion waves (250 particles instead of 150)
-                    for (let i = 0; i < 250; i++) {
+                    // Primary explosion waves (100 particles - optimized for mobile)
+                    for (let i = 0; i < 100; i++) {
                         setTimeout(() => {
                             const color = rainbowColors[i % rainbowColors.length];
                             this.createParticles(enemy.x, enemy.y, 20, color); // More particles per burst
@@ -4094,8 +4123,8 @@
                         }, ring * 600);
                     }
                     
-                    // 🏆 Trophy/medal shower effect - MORE trophies!
-                    for (let i = 0; i < 50; i++) {
+                    // 🏆 Trophy/medal shower effect (30 trophies - optimized for mobile)
+                    for (let i = 0; i < 30; i++) {
                         setTimeout(() => {
                             const x = 50 + Math.random() * 700;
                             const y = -50 - Math.random() * 150;
@@ -4104,8 +4133,8 @@
                         }, i * 80);
                     }
                     
-                    // 💰 Mega credit shower - even more rewards!
-                    for (let i = 0; i < 40; i++) {
+                    // 💰 Mega credit shower (25 credits - optimized for mobile)
+                    for (let i = 0; i < 25; i++) {
                         setTimeout(() => {
                             const x = 100 + Math.random() * 600;
                             const credits = Math.floor(20 + Math.random() * 50); // More credits!
@@ -6249,10 +6278,7 @@
                             this.phase = 'ACTIVE';
                             this.timer = 0;
                             this.freezeEnemies();
-                            // Apply slow motion
-                            if (this.game.timeScale !== undefined) {
-                                this.game.timeScale = 0.3;
-                            }
+                            // Note: Enemies are frozen individually (speed = 0), no global timeScale needed
                         }
                         break;
 
@@ -6272,10 +6298,7 @@
                             this.phase = 'FADING';
                             this.timer = 0;
                             this.unfreezeEnemies();
-                            // Restore normal speed
-                            if (this.game.timeScale !== undefined) {
-                                this.game.timeScale = 1.0;
-                            }
+                            // Enemies restored to original speed
                         }
                         break;
 
@@ -6344,9 +6367,10 @@
             }
 
             unfreezeEnemies() {
-                // Restore enemy speeds
+                // Restore enemy speeds (only if enemy still exists in the game)
                 this.frozenEnemies.forEach(enemy => {
-                    if (this.originalEnemySpeeds.has(enemy)) {
+                    // Check if enemy still exists before unfreezing to prevent memory leaks
+                    if (this.game.enemies.includes(enemy) && this.originalEnemySpeeds.has(enemy)) {
                         enemy.speed = this.originalEnemySpeeds.get(enemy);
                         enemy.frozen = false;
                     }
@@ -6472,6 +6496,387 @@
                 if (this.game.timeScale !== undefined) {
                     this.game.timeScale = 1.0;
                 }
+            }
+        }
+
+        // 💣 STINK MISSILE - Launch 3 homing missiles that track the boss
+        class StinkMissile {
+            constructor(game) {
+                this.game = game;
+                this.missiles = [];
+                this.remove = false;
+
+                // Launch 3 missiles from the 3 lanes
+                const lanes = [this.game.canvas.width * 0.25, this.game.canvas.width * 0.5, this.game.canvas.width * 0.75];
+                lanes.forEach((laneX, index) => {
+                    setTimeout(() => {
+                        this.missiles.push({
+                            x: laneX,
+                            y: this.game.canvas.height - 100,
+                            vx: 0,
+                            vy: 0,
+                            speed: 8,
+                            rotation: -Math.PI / 2,
+                            trail: [],
+                            active: true
+                        });
+                    }, index * 200); // Stagger launches by 200ms
+                });
+            }
+
+            update(deltaTime) {
+                let allInactive = true;
+
+                this.missiles.forEach(missile => {
+                    if (!missile.active) return;
+                    allInactive = false;
+
+                    // Homing behavior - track the boss
+                    if (this.game.boss && !this.game.boss.remove) {
+                        const dx = this.game.boss.x - missile.x;
+                        const dy = this.game.boss.y - missile.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        const targetAngle = Math.atan2(dy, dx);
+
+                        // Smooth rotation towards target
+                        let angleDiff = targetAngle - missile.rotation;
+                        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                        missile.rotation += angleDiff * 0.1;
+
+                        // Move in the direction of rotation
+                        missile.vx = Math.cos(missile.rotation) * missile.speed;
+                        missile.vy = Math.sin(missile.rotation) * missile.speed;
+                        missile.x += missile.vx * (deltaTime / 16);
+                        missile.y += missile.vy * (deltaTime / 16);
+
+                        // Add trail
+                        missile.trail.push({ x: missile.x, y: missile.y, life: 1.0 });
+                        if (missile.trail.length > 20) missile.trail.shift();
+
+                        // Update trail life
+                        missile.trail.forEach(t => t.life -= 0.05);
+
+                        // Check collision with boss
+                        if (distance < 50) {
+                            this.hitBoss(missile);
+                            missile.active = false;
+                        }
+
+                        // Remove if off screen
+                        if (missile.x < -50 || missile.x > this.game.canvas.width + 50 ||
+                            missile.y < -50 || missile.y > this.game.canvas.height + 50) {
+                            missile.active = false;
+                        }
+                    } else {
+                        missile.active = false;
+                    }
+                });
+
+                if (allInactive) {
+                    this.remove = true;
+                }
+            }
+
+            hitBoss(missile) {
+                const damage = 500;
+                if (this.game.boss && !this.game.boss.remove) {
+                    this.game.boss.hp -= damage;
+
+                    // Create explosion effect at impact
+                    this.game.createFloatingText(
+                        missile.x,
+                        missile.y,
+                        `-${damage}`,
+                        '#00ff00',
+                        32
+                    );
+
+                    // Small explosion particles
+                    for (let i = 0; i < 20; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 2 + Math.random() * 4;
+                        this.game.particles.push({
+                            x: missile.x,
+                            y: missile.y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            size: 4 + Math.random() * 6,
+                            life: 1.0,
+                            color: '#00ff00',
+                            decay: 0.02
+                        });
+                    }
+                }
+            }
+
+            draw(ctx) {
+                this.missiles.forEach(missile => {
+                    if (!missile.active) return;
+
+                    // Draw trail
+                    missile.trail.forEach((t, index) => {
+                        if (t.life > 0) {
+                            ctx.globalAlpha = t.life * 0.6;
+                            ctx.fillStyle = '#00ff00';
+                            const size = 4 * t.life;
+                            ctx.fillRect(t.x - size/2, t.y - size/2, size, size);
+                        }
+                    });
+                    ctx.globalAlpha = 1.0;
+
+                    // Draw missile body
+                    ctx.save();
+                    ctx.translate(missile.x, missile.y);
+                    ctx.rotate(missile.rotation);
+
+                    // Missile shape
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(-15, -5, 30, 10);
+                    ctx.beginPath();
+                    ctx.moveTo(15, 0);
+                    ctx.lineTo(20, -5);
+                    ctx.lineTo(20, 5);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Fins
+                    ctx.fillStyle = '#00aa00';
+                    ctx.fillRect(-12, -8, 8, 3);
+                    ctx.fillRect(-12, 5, 8, 3);
+
+                    ctx.restore();
+                });
+            }
+        }
+
+        // 🤖 SUPPORT DRONE - Spawn 4 drones that orbit and shoot the boss
+        class SupportDrone {
+            constructor(game) {
+                this.game = game;
+                this.drones = [];
+                this.duration = 8000; // 8 seconds
+                this.timer = 0;
+                this.remove = false;
+                this.shootInterval = 800; // Shoot every 0.8 seconds
+
+                // Spawn 4 drones around the boss
+                for (let i = 0; i < 4; i++) {
+                    const angle = (Math.PI * 2 / 4) * i;
+                    this.drones.push({
+                        angle: angle,
+                        distance: 120,
+                        shootTimer: Math.random() * this.shootInterval,
+                        rotation: 0
+                    });
+                }
+            }
+
+            update(deltaTime) {
+                this.timer += deltaTime;
+
+                if (this.timer >= this.duration) {
+                    this.remove = true;
+                    return;
+                }
+
+                if (!this.game.boss || this.game.boss.remove) {
+                    this.remove = true;
+                    return;
+                }
+
+                this.drones.forEach(drone => {
+                    // Orbit around boss
+                    drone.angle += deltaTime * 0.002;
+                    drone.rotation += deltaTime * 0.003;
+
+                    // Shoot at boss
+                    drone.shootTimer += deltaTime;
+                    if (drone.shootTimer >= this.shootInterval) {
+                        drone.shootTimer = 0;
+                        this.shootAtBoss(drone);
+                    }
+                });
+            }
+
+            shootAtBoss(drone) {
+                const droneX = this.game.boss.x + Math.cos(drone.angle) * drone.distance;
+                const droneY = this.game.boss.y + Math.sin(drone.angle) * drone.distance;
+
+                const damage = 150;
+                this.game.boss.hp -= damage;
+
+                // Create laser beam effect
+                this.game.particles.push({
+                    type: 'laser',
+                    x1: droneX,
+                    y1: droneY,
+                    x2: this.game.boss.x,
+                    y2: this.game.boss.y,
+                    life: 0.3,
+                    color: '#ffff00'
+                });
+
+                // Damage number
+                this.game.createFloatingText(
+                    this.game.boss.x,
+                    this.game.boss.y,
+                    `-${damage}`,
+                    '#ffff00',
+                    24
+                );
+            }
+
+            draw(ctx) {
+                if (!this.game.boss || this.game.boss.remove) return;
+
+                this.drones.forEach(drone => {
+                    const x = this.game.boss.x + Math.cos(drone.angle) * drone.distance;
+                    const y = this.game.boss.y + Math.sin(drone.angle) * drone.distance;
+
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(drone.rotation);
+
+                    // Drone body
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(-12, -12, 24, 24);
+
+                    // Propellers
+                    ctx.strokeStyle = '#ffaa00';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-15, -15);
+                    ctx.lineTo(-8, -8);
+                    ctx.moveTo(15, -15);
+                    ctx.lineTo(8, -8);
+                    ctx.moveTo(-15, 15);
+                    ctx.lineTo(-8, 8);
+                    ctx.moveTo(15, 15);
+                    ctx.lineTo(8, 8);
+                    ctx.stroke();
+
+                    // Center eye
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(-3, -3, 6, 6);
+
+                    ctx.restore();
+                });
+            }
+        }
+
+        // ⚡ ELECTRIC SHOCK - Chain lightning that bounces between enemies
+        class ElectricShock {
+            constructor(game) {
+                this.game = game;
+                this.duration = 3000; // 3 seconds
+                this.timer = 0;
+                this.remove = false;
+                this.shockInterval = 300; // Shock every 0.3 seconds
+                this.shockTimer = 0;
+                this.lightningBolts = [];
+            }
+
+            update(deltaTime) {
+                this.timer += deltaTime;
+                this.shockTimer += deltaTime;
+
+                if (this.timer >= this.duration) {
+                    this.remove = true;
+                    return;
+                }
+
+                // Trigger shock wave
+                if (this.shockTimer >= this.shockInterval) {
+                    this.shockTimer = 0;
+                    this.triggerShock();
+                }
+
+                // Update lightning bolts
+                this.lightningBolts.forEach(bolt => {
+                    bolt.life -= deltaTime / 200;
+                });
+                this.lightningBolts = this.lightningBolts.filter(b => b.life > 0);
+            }
+
+            triggerShock() {
+                // Damage boss
+                if (this.game.boss && !this.game.boss.remove) {
+                    const bossDamage = 200;
+                    this.game.boss.hp -= bossDamage;
+
+                    this.game.createFloatingText(
+                        this.game.boss.x,
+                        this.game.boss.y,
+                        `-${bossDamage}`,
+                        '#ffff00',
+                        32
+                    );
+
+                    // Create lightning from boss to minions
+                    this.game.enemies.forEach(enemy => {
+                        if (!enemy.isBoss && !enemy.remove) {
+                            const minionDamage = 100;
+                            enemy.hp -= minionDamage;
+
+                            // Create lightning bolt
+                            this.lightningBolts.push({
+                                x1: this.game.boss.x,
+                                y1: this.game.boss.y,
+                                x2: enemy.x,
+                                y2: enemy.y,
+                                life: 1.0,
+                                segments: this.generateLightningSegments(
+                                    this.game.boss.x,
+                                    this.game.boss.y,
+                                    enemy.x,
+                                    enemy.y
+                                )
+                            });
+                        }
+                    });
+                }
+            }
+
+            generateLightningSegments(x1, y1, x2, y2) {
+                const segments = [];
+                const numSegments = 8;
+                const dx = (x2 - x1) / numSegments;
+                const dy = (y2 - y1) / numSegments;
+
+                segments.push({ x: x1, y: y1 });
+
+                for (let i = 1; i < numSegments; i++) {
+                    const x = x1 + dx * i + (Math.random() - 0.5) * 30;
+                    const y = y1 + dy * i + (Math.random() - 0.5) * 30;
+                    segments.push({ x, y });
+                }
+
+                segments.push({ x: x2, y: y2 });
+                return segments;
+            }
+
+            draw(ctx) {
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.shadowColor = '#ffff00';
+                ctx.shadowBlur = 10;
+
+                this.lightningBolts.forEach(bolt => {
+                    ctx.globalAlpha = bolt.life;
+                    ctx.beginPath();
+                    bolt.segments.forEach((seg, index) => {
+                        if (index === 0) {
+                            ctx.moveTo(seg.x, seg.y);
+                        } else {
+                            ctx.lineTo(seg.x, seg.y);
+                        }
+                    });
+                    ctx.stroke();
+                });
+
+                ctx.globalAlpha = 1.0;
+                ctx.shadowBlur = 0;
             }
         }
 
@@ -7061,12 +7466,12 @@
                     const wx = this.centerX + Math.cos(weapon.angle) * this.wheelRadius;
                     const wy = this.centerY + Math.sin(weapon.angle) * this.wheelRadius;
                     const dist = Math.hypot(x - wx, y - wy);
-                    if (dist < 15) return weapon.id; // 🔧 v0.1.2: Updated for new 15px radius
+                    if (dist < 24) return weapon.id; // 🔧 v0.1.3: Increased to 24px for better mobile touch (48x48px target)
                 }
 
                 // Check center weapon
                 const distCenter = Math.hypot(x - this.centerX, y - this.centerY);
-                if (distCenter < 19) return this.centerWeapon.id; // 🔧 v0.1.2: Updated for new 19px radius
+                if (distCenter < 30) return this.centerWeapon.id; // 🔧 v0.1.3: Increased to 30px for better mobile touch (60x60px target)
 
                 return null;
             }
